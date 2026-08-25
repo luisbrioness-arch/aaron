@@ -274,3 +274,41 @@ dentro de una misma venta mixta, y el schema no tiene columnas para eso
 todavía. **Si se necesita de verdad:** agregar una tabla
 `sale_payments` (una venta, N pagos) sería el cambio correcto — no forzar
 más columnas sueltas en `sales`.
+
+## D-22 · `suppliers.php` no es admin-only — bodega también puede crear proveedores
+**2026-08-25** · Vigente
+
+FERRIMIX deja `suppliers.php` entero admin-only (su D-16). Acá
+`?action=list` y `?action=create` aceptan `admin` **y** `warehouse_staff`
+— la pantalla de recepción de compras (T-03) necesita poder cargar un
+proveedor nuevo en el momento, sin frenar a esperar a que un admin lo
+haga. El documento de arquitectura ya preveía esto ("bodega también
+puede ver/gestionar proveedores para 'recibir compra' fluido"). Un CRUD
+completo (editar, desactivar) sigue pendiente de T-08 y ese sí puede
+quedar admin-only si hace falta — hoy solo existen `list`/`create`.
+
+## D-23 · `purchases_details.expiration_date`/`lot_code` son una referencia, no la fuente de verdad
+**2026-08-25** · Vigente
+
+Un producto puede recibirse en varias recepciones parciales con
+vencimientos distintos cada vez (ej. la mitad del pedido llega con una
+fecha, el resto después con otra). `purchases_details` tiene una sola
+fila por producto por orden, así que sus columnas `expiration_date`/
+`lot_code` solo guardan **la última recepción** como referencia rápida —
+se sobrescriben en cada llamada a `?action=receive`. La fuente de verdad
+real para vencimientos es `product_lots`: cada llamada a `receive` crea
+una fila nueva ahí con el vencimiento/lote de *esa* recepción específica,
+así que el historial completo no se pierde aunque `purchases_details` solo
+recuerde el último.
+
+## D-24 · T-08 (Proveedores) parcialmente adelantado por T-03
+**2026-08-25** · Vigente
+
+Al implementar T-03 se necesitaba un selector de proveedores funcional, así
+que se adelantó parte del backend de T-08 (`suppliers.php?action=list` y
+`?action=create`, ver D-22) más un modal liviano de alta rápida dentro
+de `RecepcionPage.tsx` (`SupplierQuickAddModal`). Lo que falta de T-08 es
+`?action=update`/`?action=deactivate` en `suppliers.php` y la pantalla
+dedicada (`SuppliersPage.tsx`, listado completo con edición/
+desactivación) — `NEXT_STEPS.md` se actualizó para reflejar que ya no es
+el CRUD completo desde cero, solo la mitad que faltaba.

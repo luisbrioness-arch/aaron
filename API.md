@@ -336,18 +336,83 @@ Forma esperada:
 }
 ```
 
-## Compras — `purchases.php` (T-03, pendiente)
+## Compras — `purchases.php` — **implementado** (T-03)
 
-- `GET ?action=list` / `?action=get&id=UUID`
-- `POST ?action=create` — no toca stock, crea la orden en `pending`.
-- `POST ?action=receive` — recepción parcial admitida. Si la línea trae
-  `expiration_date`/`lot_code`, crea la fila correspondiente en
-  `product_lots` además de sumar stock e insertar `inventory_movements`.
+Todo el archivo exige rol `admin` o `warehouse_staff`.
 
-## Proveedores — `suppliers.php` (T-08, pendiente)
+**GET** `?action=list` — todas las órdenes, más recientes primero:
+```json
+{
+  "success": true,
+  "data": [
+    { "id": "UUID", "purchase_number": "OC-000001", "purchase_date": "2026-08-25", "received_date": "2026-08-25", "total_amount": 2090, "status": "received", "supplier_name": "Distribuidora Central" }
+  ],
+  "message": "Órdenes de compra listadas"
+}
+```
+`status`: `pending` (nada recibido) | `partial` | `received` (todo
+recibido, `received_date` se llena solo) | `cancelled` (sin endpoint para
+cancelar todavía, no se pidió).
 
-- `GET ?action=list`
-- `POST ?action=create`
+**GET** `?action=get&id=UUID` — detalle con líneas (incluye
+`received_quantity`, `expiration_date`, `lot_code` de la última
+recepción de cada línea — ver D-23 en `DECISIONS.md`).
+
+**POST** `?action=create` — no toca stock, crea la orden en `pending`.
+
+Request:
+```json
+{
+  "supplier_id": "UUID",
+  "notes": "opcional",
+  "items": [{ "product_id": "UUID", "quantity": 50, "unit_cost": 3000 }]
+}
+```
+`purchase_number` se genera solo (`OC-NNNNNN`, secuencial, mismo riesgo
+de condición de carrera aceptado que `invoice_number` — ver D-19).
+`total_amount` se calcula del lado del servidor.
+
+**POST** `?action=receive` — recepción parcial admitida, `quantity` es lo
+que llega **en esta recepción** (incremental, no acumulado).
+
+Request:
+```json
+{
+  "purchase_id": "UUID",
+  "items": [
+    { "product_id": "UUID", "quantity": 20 },
+    { "product_id": "UUID-perecible", "quantity": 10, "expiration_date": "2026-09-15", "lot_code": "L-0847" }
+  ]
+}
+```
+`400` si la cantidad supera lo pendiente de esa línea, si la orden está
+cancelada, o si ya estaba completamente recibida. Por cada línea: suma
+`products.stock_current`, inserta un `inventory_movements` tipo `in`
+(`reference_id` = la orden), y si el producto tiene
+`has_expiration = true`, crea una fila nueva en `product_lots` con el
+`expiration_date`/`lot_code` de *esa* recepción (ver D-23 — cada
+recepción parcial puede traer un lote distinto). Recalcula el `status`
+de la orden completa según cuánto se haya recibido en total. Todo en una
+transacción.
+
+Response:
+```json
+{ "success": true, "data": { "purchase_id": "UUID", "status": "received" }, "message": "Recepción registrada" }
+```
+
+## Proveedores — `suppliers.php` — **implementado** (`list`/`create`, T-08 backend adelantado por T-03, ver D-22/D-24)
+
+`?action=list` y `?action=create` exigen rol `admin` o `warehouse_staff`
+— a diferencia de FERRIMIX (admin-only), bodega necesita poder cargar un
+proveedor nuevo al recibir mercadería (D-22).
+
+**GET** `?action=list` — `{ id, name, rut, phone, email }[]`.
+
+**POST** `?action=create` — `name` y `rut` obligatorios, resto opcional.
+`409` si el RUT ya existe.
+
+**Pendiente de T-08:** `?action=update`/`?action=deactivate` y la pantalla
+dedicada de gestión — ver D-24.
 
 ## Usuarios — `users.php` (T-09, pendiente)
 

@@ -77,14 +77,42 @@ documento de arquitectura, sección "Supuestos abiertos"):
   (responde `501`) — depende de ventas reales de T-01, ver D-16.
 - Sin reporte de origen — pedido directo en el chat.
 
+## ✅ Completado — T-03: Recepción de compras
+
+- **Descripción:** `purchases.php` (`list`/`get`/`create`/`receive`)
+  implementado de punta a punta; se adelantó también el backend de T-08
+  (`suppliers.php?action=list/create`, ver D-22/D-24) porque T-03 lo
+  necesitaba para el selector de proveedor. `RecepcionPage.tsx`: elegir
+  proveedor (con alta rápida inline, `SupplierQuickAddModal`), escanear/
+  buscar productos en cadena, cantidad + costo + vencimiento/lote por
+  línea, y un solo botón "Confirmar recepción" que crea la orden y la
+  recibe en el mismo paso (dos llamadas a la API, una sola acción para
+  quien usa la pantalla). Lista de "Órdenes recientes" de solo lectura
+  para visibilidad. Decisiones nuevas D-22 a D-24.
+- **Status:** ✅ Build limpio. **Esta fue la verificación más completa de
+  las tres tareas hechas hasta ahora:** se interceptaron
+  `suppliers.php?action=list`, `purchases.php?action=list/create/receive`
+  y `products.php?action=search` a nivel de XHR, y se ejercitó el flujo
+  real completo — seleccionar proveedor, agregar un producto normal y uno
+  con vencimiento, confirmar sin fecha de vencimiento (correctamente
+  rechazado por la validación del cliente), completar la fecha, confirmar
+  de nuevo, e inspeccionar el payload exacto de las dos llamadas
+  (`create` y `receive`) para confirmar que `product_id`/`quantity`/
+  `unit_cost`/`expiration_date`/`lot_code` viajan como se esperaba. La
+  orden apareció como "Recibida" en la lista de recientes al final.
+- **Qué NO se probó:** contra una base de datos real (que
+  `product_lots`/`inventory_movements` se escriban de verdad, que el
+  `status` de la orden se recalcule bien con MariaDB) — sigue sin haber
+  PHP local. Se intentó instalar PHP vía winget para esta sesión también;
+  sigue roto (ver HANDOFF.md sesión anterior). No se construyó la
+  continuación de una recepción parcial existente (recibir el saldo
+  pendiente de una orden `partial` ya creada) — el flujo actual siempre
+  crea una orden nueva por recepción.
+- Sin reporte de origen — pedido directo en el chat.
+
 ---
 
 ## Backlog — construir sobre el scaffold
-
-### T-03: Recepción de compras
-- **Qué falta:** `purchases.php` real; `RecepcionPage.tsx` — pensada para
-  una cadena de escaneos, no un formulario lento. Al recibir, si la línea
-  trae vencimiento, crea la fila en `product_lots`.
 
 ### T-04: Vencimientos y alertas
 - **Qué falta:** `lots.php` real; `AlertasPage.tsx` — stock bajo (ya
@@ -109,9 +137,10 @@ documento de arquitectura, sección "Supuestos abiertos"):
   hoy se procesa `discount_amount` por línea) y setear
   `sales_details.promotion_id` cuando aplique.
 
-### T-08: Proveedores
-- **Qué falta:** `suppliers.php` real; `SuppliersPage.tsx` — CRUD completo
-  para admin, lectura para bodega (selector en Recepción).
+### T-08: Proveedores (backend parcial adelantado por T-03, ver D-24)
+- **Qué falta:** `suppliers.php?action=update`/`?action=deactivate` (solo
+  existen `list`/`create` todavía) y `SuppliersPage.tsx` — pantalla
+  dedicada de listado con edición y desactivación.
 
 ### T-09: Usuarios
 - **Qué falta:** `users.php` real; `UsersPage.tsx` — crear/editar/activar/

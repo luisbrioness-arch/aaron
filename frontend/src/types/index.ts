@@ -24,6 +24,21 @@ export interface Category {
 export interface Supplier {
   id: string;
   name: string;
+  rut?: string;
+  phone?: string | null;
+  email?: string | null;
+}
+
+export type PurchaseStatus = 'pending' | 'partial' | 'received' | 'cancelled';
+
+export interface PurchaseSummary {
+  id: string;
+  purchase_number: string;
+  purchase_date: string;
+  received_date: string | null;
+  total_amount: number;
+  status: PurchaseStatus;
+  supplier_name: string;
 }
 
 export interface Product {

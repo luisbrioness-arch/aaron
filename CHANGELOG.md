@@ -4,6 +4,14 @@ Qué cambió en el producto, en lenguaje de usuario final. Todavía no hay
 una versión utilizable — este archivo empieza a llenarse de verdad desde
 T-01.
 
+## 2026-08-25 — Recepción de compras
+
+Bodega ya puede recibir mercadería: elegir el proveedor (o darlo de alta
+en el momento si es nuevo), escanear los productos que van llegando uno
+tras otro con su cantidad y costo, indicar vencimiento y lote cuando
+corresponde, y confirmar todo de una vez. Todavía no está desplegado en
+ningún servidor real.
+
 ## 2026-08-25 — Punto de venta y caja
 
 El POS ya permite cobrar: buscar productos por nombre o código de barras,

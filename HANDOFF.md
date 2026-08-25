@@ -13,6 +13,69 @@ las anteriores):
 
 ---
 
+## Sesión 4 — 2026-08-25
+
+### Qué se hizo
+- Se implementó T-03 completo (Recepción de compras) y, como prerequisito
+  suyo, se adelantó el backend de T-08 (Proveedores):
+  - `api/suppliers.php`: `list`, `create` — a diferencia de FERRIMIX
+    (admin-only), acá `admin` y `warehouse_staff` pueden ambas acciones
+    porque bodega necesita dar de alta un proveedor nuevo al recibir
+    mercadería sin frenar a esperar a un admin (D-22).
+  - `api/purchases.php`: `list`, `get`, `create` (no toca stock, genera
+    `purchase_number` secuencial tipo `OC-NNNNNN`), `receive` (recepción
+    parcial, actualiza stock, inserta `inventory_movements`, y crea una
+    fila en `product_lots` por cada recepción de un producto con
+    vencimiento — D-23 explica por qué `purchases_details.expiration_date`
+    es solo una referencia de "última recepción", no la fuente de verdad).
+  - Frontend: `lib/suppliers.ts`, `lib/purchases.ts`, y
+    `RecepcionPage.tsx` — selector de proveedor con alta rápida inline
+    (`SupplierQuickAddModal`), búsqueda/escaneo de productos en cadena,
+    tabla editable de líneas (cantidad, costo, vencimiento y lote cuando
+    aplica), y un solo botón que crea la orden y la recibe en el mismo
+    paso. Lista de "Órdenes recientes" de solo lectura.
+  - `DECISIONS.md`: D-22 a D-24.
+- **Verificación end-to-end completa, la más rigurosa hasta ahora:** se
+  interceptaron a nivel de XHR `suppliers.php?action=list`,
+  `products.php?action=search`, y `purchases.php?action=create/list/
+  receive`. Se ejecutó el flujo real: elegir proveedor mockeado, agregar
+  un producto sin vencimiento y uno con vencimiento, confirmar sin fecha
+  (se verificó que el cliente lo rechaza con el mensaje correcto),
+  completar la fecha, confirmar de nuevo, e **inspeccionar los payloads
+  JSON exactos** que `RecepcionPage.tsx` mandó a `create` y a `receive`
+  para confirmar que cada campo (`product_id`, `quantity`, `unit_cost`,
+  `expiration_date`, `lot_code`, `purchase_id` encadenado del resultado de
+  `create`) viaja como se esperaba. La orden terminó mostrándose como
+  "Recibida" en la lista de recientes.
+- Descubrí durante la primera pasada de este mismo test que el truco de
+  "instalar el mock de XHR y después navegar" no sirve cuando los datos
+  se cargan en un `useEffect` al montar (a diferencia de una búsqueda
+  disparada por escribir, que sí es un evento posterior al mock) — hay
+  que instalar el mock y **luego forzar un remount por navegación del
+  lado del cliente** (clic en un link de React Router, no un reload real
+  del navegador) para que el efecto se dispare de nuevo con el mock ya
+  activo. Vale la pena recordarlo para la próxima vez que haya que probar
+  una pantalla con carga de datos al montar sin backend real.
+
+### Qué falló o quedó a medias
+- **Sigue sin haber PHP local.** Se volvió a intentar instalar PHP vía
+  `winget install PHP.PHP.8.3` — mismo error 404 en la descarga que la
+  sesión anterior, el paquete de winget sigue roto. `purchases.php` y
+  `suppliers.php` están revisados a mano, sin ejecutar contra MariaDB de
+  verdad.
+- No se construyó la continuación de una recepción parcial ya existente
+  (recibir el saldo pendiente de una orden que quedó en estado
+  `partial`) — el flujo de `RecepcionPage.tsx` siempre crea una orden
+  nueva. Si se necesita recepción parcial de verdad (llega la mitad hoy,
+  el resto la próxima semana), falta esa pantalla/flujo.
+- `suppliers.php` solo tiene `list`/`create` — no hay `update` ni
+  `deactivate` todavía, esos quedan como el resto pendiente de T-08.
+
+### Subido directo a main / vía PR
+Sin subir todavía — pendiente de que Luis revise antes del commit.
+
+---
+
 ## Sesión 3 — 2026-08-25
 
 ### Qué se hizo
