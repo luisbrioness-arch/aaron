@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/* Tailwind 4: variante de clase para tema oscuro, controlada por
+   store/themeStore.ts (Zustand + localStorage), mismo patrón que FERRIMIX. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Paleta "Aaron Provisiones" — ver el documento de arquitectura para el
+     razonamiento completo. Dorado trigo (marca) + verde aceituna (acento/
+     frescura) + ámbar (alerta) + rojo teja (crítico), sobre papel cálido. */
+  --color-wheat: #b87a22;
+  --color-wheat-deep: #8f5e19;
+  --color-wheat-soft: #f1dfb8;
+  --color-olive: #4c7a3d;
+  --color-olive-deep: #375a2c;
+  --color-olive-soft: #dce8d2;
+  --color-amber: #c6720b;
+  --color-amber-soft: #f3dfbe;
+  --color-brick: #a23b2e;
+  --color-brick-soft: #f0d6ce;
+
+  --color-background: #f6f1e3;
+  --color-foreground: #2b2318;
+  --color-card: #fffdf7;
+  --color-card-foreground: #2b2318;
+  --color-primary: #b87a22;
+  --color-primary-foreground: #fffdf7;
+  --color-secondary: #eee6ce;
+  --color-secondary-foreground: #2b2318;
+  --color-muted: #eee6ce;
+  --color-muted-foreground: #5c5138;
+  --color-accent: #4c7a3d;
+  --color-accent-foreground: #fffdf7;
+  --color-warning: #c6720b;
+  --color-warning-foreground: #fffdf7;
+  --color-destructive: #a23b2e;
+  --color-destructive-foreground: #fffdf7;
+  --color-border: #ded0a6;
+  --color-input: #ded0a6;
+  --color-ring: #4c7a3d;
+
+  --font-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+.dark {
+  --color-background: #1c1710;
+  --color-foreground: #f1e9d8;
+  --color-card: #262019;
+  --color-card-foreground: #f1e9d8;
+  --color-primary: #e3a94f;
+  --color-primary-foreground: #1c1710;
+  --color-secondary: #2f2820;
+  --color-secondary-foreground: #f1e9d8;
+  --color-muted: #2f2820;
+  --color-muted-foreground: #c7bb9f;
+  --color-accent: #7cb268;
+  --color-accent-foreground: #1c1710;
+  --color-warning: #e6963f;
+  --color-warning-foreground: #1c1710;
+  --color-destructive: #e17e6b;
+  --color-destructive-foreground: #1c1710;
+  --color-border: #423824;
+  --color-input: #423824;
+  --color-ring: #7cb268;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}

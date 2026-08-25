@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+.env
+.env.local
+.DS_Store
+api/config.php
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

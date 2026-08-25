@@ -1,0 +1,17 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # TBD: sin dominio/hosting confirmado todavía. Si termina en subcarpeta
+  # en vez de subdominio propio, esta ruta y el "base" de vite.config.ts
+  # tienen que cambiar juntos — mismo patrón que el CRM de Parque San Pedro.
+  RewriteBase /
+
+  # Servir archivos/carpetas reales tal cual (JS, CSS, imágenes, etc.)
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Todo lo demás cae a index.html para que react-router lo maneje
+  RewriteRule ^ index.html [L]
+</IfModule>

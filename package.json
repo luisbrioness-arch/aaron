@@ -1,0 +1,25 @@
+{
+  "name": "aaron-provisiones",
+  "version": "0.1.0",
+  "description": "Sistema POS + gestión de inventario para Aaron Provisiones",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w frontend",
+    "build": "npm run build -w frontend",
+    "build:frontend": "npm run build -w frontend",
+    "preview": "npm run preview -w frontend",
+    "setup-db": "echo 'El esquema SQL está en ./api/db/ — importar manualmente a MariaDB'"
+  },
+  "keywords": [
+    "pos",
+    "minimarket",
+    "inventory",
+    "cash-register"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
