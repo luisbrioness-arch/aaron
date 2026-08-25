@@ -54,7 +54,7 @@ llama `middleware.php::requireRole($auth, [...])` después de
 | Acción | Roles permitidos |
 |---|---|
 | `products.php?action=search/list/low-stock/categories` | cualquier usuario autenticado |
-| `products.php?action=create/rename/deactivate` | `admin`, `warehouse_staff` |
+| `products.php?action=create/update/deactivate` | `admin`, `warehouse_staff` |
 | `sales.php` (todo el archivo) | cualquier usuario autenticado |
 | `cash_register.php` (todo el archivo) | cualquier usuario autenticado |
 | `inventory.php` (todo el archivo) | `admin`, `warehouse_staff` |
@@ -62,8 +62,8 @@ llama `middleware.php::requireRole($auth, [...])` después de
 | `promotions.php?action=list` | cualquier usuario autenticado (el POS necesita leerlas) |
 | `promotions.php?action=create/update/deactivate` | `admin` |
 | `purchases.php` (todo el archivo) | `admin`, `warehouse_staff` |
-| `suppliers.php?action=list` | `admin`, `warehouse_staff` |
-| `suppliers.php?action=create` | `admin` |
+| `suppliers.php?action=list/create/update` | `admin`, `warehouse_staff` |
+| `suppliers.php?action=deactivate` | `admin` |
 | `users.php` (todo el archivo) | `admin` |
 | `reports.php` (todo el archivo) | `admin` |
 
@@ -193,6 +193,11 @@ $10 más cercano. `card`/`transfer`/`mixed` cobran el monto exacto.
 primero del lote que vence antes. Si el producto no tiene lotes cargados
 todavía, se descuenta el agregado igual (ver D-17).
 
+**Promociones automáticas (T-07, D-27):** si un producto tiene una
+promoción activa y vigente, su descuento se calcula solo y se **suma**
+al `discount_amount` manual de esa línea (no lo reemplaza) —
+`sales_details.promotion_id` queda seteado si la promo aportó algo.
+
 `amount_received` (opcional, solo con `payment_method: "cash"`): si viene,
 el servidor calcula `change_amount` contra su propio total (nunca contra
 uno mandado por el cliente) y responde `400` si el efectivo no alcanza.
@@ -215,7 +220,7 @@ Response (201):
     "amount_received": 40000,
     "change_amount": 6080,
     "items": [
-      { "product_id": "UUID", "product_name": "Arroz grado 1 1kg", "quantity": 2, "unit_price": 1290, "discount_amount": 0, "subtotal": 2580 }
+      { "product_id": "UUID", "product_name": "Arroz grado 1 1kg", "promotion_id": null, "quantity": 2, "unit_price": 1290, "discount_amount": 0, "subtotal": 2580 }
     ]
   },
   "message": "Venta completada"
@@ -356,22 +361,58 @@ Response:
 { "success": true, "data": { "lot_id": "UUID-lote", "quantity_adjusted": 6, "quantity_remaining": 0 }, "message": "Merma registrada" }
 ```
 
-## Promociones — `promotions.php` (T-07, pendiente)
+## Promociones — `promotions.php` — **implementado** (T-07)
 
-Nuevo respecto a FERRIMIX.
+Nuevo respecto a FERRIMIX. `?action=list` requiere solo JWT (lo necesita
+el POS); `create`/`update`/`deactivate` son admin-only.
 
-- `GET ?action=list` — promociones activas, con sus productos.
-- `POST ?action=create` / `?action=update` / `?action=deactivate`
-
-Forma esperada:
+**GET** `?action=list` — solo promociones activas **y vigentes**
+(dentro de `starts_at`/`ends_at` si están definidos):
 ```json
 {
-  "id": "UUID", "name": "2x1 Bebidas 1.5L",
-  "type": "nxm | pack_price",
-  "buy_quantity": 2, "pay_quantity": 1, "pack_price": null,
+  "success": true,
+  "data": [
+    {
+      "id": "UUID", "name": "2x1 Bebidas 1.5L", "type": "nxm",
+      "buy_quantity": 2, "pay_quantity": 1, "pack_price": null,
+      "starts_at": null, "ends_at": null, "is_active": true,
+      "product_ids": ["UUID", "UUID"]
+    }
+  ],
+  "message": "Promociones activas"
+}
+```
+Para `type: "pack_price"`, `buy_quantity` es el tamaño del pack (no hay
+columna aparte — ver D-26 en `DECISIONS.md`) y `pay_quantity` es `null`.
+
+**POST** `?action=create` / `?action=update`
+
+Request:
+```json
+{
+  "id": "UUID (solo update)",
+  "name": "2x1 Bebidas 1.5L", "type": "nxm",
+  "buy_quantity": 2, "pay_quantity": 1,
+  "ends_at": null,
   "product_ids": ["UUID", "UUID"]
 }
 ```
+Para `nxm`: `buy_quantity`/`pay_quantity` obligatorios, positivos, y
+`pay_quantity < buy_quantity`. Para `pack_price`: `buy_quantity`
+(tamaño del pack) y `pack_price` obligatorios. `product_ids` no puede
+venir vacío. `update` reemplaza la lista completa de productos si
+`product_ids` viene en el body.
+
+**POST** `?action=deactivate` — `{ "id": "UUID" }`.
+
+**Aplicación automática en `sales.php` (ver D-27):** al crear una venta,
+cada línea se cruza contra las promociones activas de ese producto. El
+descuento de la promo se **suma** al descuento manual de la línea (si lo
+hay), clampeado igual que cualquier descuento. La línea queda con
+`sales_details.promotion_id` seteado solo si la promo efectivamente
+aportó descuento (`> 0`). Si un producto está en más de una promo activa
+a la vez, gana la primera que encuentre la consulta — no hay prioridad
+explícita (ver D-27).
 
 ## Compras — `purchases.php` — **implementado** (T-03)
 
@@ -437,33 +478,116 @@ Response:
 { "success": true, "data": { "purchase_id": "UUID", "status": "received" }, "message": "Recepción registrada" }
 ```
 
-## Proveedores — `suppliers.php` — **implementado** (`list`/`create`, T-08 backend adelantado por T-03, ver D-22/D-24)
+## Proveedores — `suppliers.php` — **implementado** (T-08 completo, ver D-22/D-24)
 
-`?action=list` y `?action=create` exigen rol `admin` o `warehouse_staff`
-— a diferencia de FERRIMIX (admin-only), bodega necesita poder cargar un
-proveedor nuevo al recibir mercadería (D-22).
+`?action=list`/`create`/`update` exigen rol `admin` o `warehouse_staff`
+— a diferencia de FERRIMIX (admin-only), bodega necesita poder cargar o
+corregir un proveedor al recibir mercadería (D-22). `?action=deactivate`
+sí es admin-only (limpieza administrativa, no algo urgente para bodega).
 
-**GET** `?action=list` — `{ id, name, rut, phone, email }[]`.
+**GET** `?action=list` — solo proveedores activos:
+`{ id, name, rut, phone, email, address, contact_person }[]` (D-28: la
+columna `is_active` se agregó al implementar esta acción, no estaba en
+el esquema original).
 
 **POST** `?action=create` — `name` y `rut` obligatorios, resto opcional.
 `409` si el RUT ya existe.
 
-**Pendiente de T-08:** `?action=update`/`?action=deactivate` y la pantalla
-dedicada de gestión — ver D-24.
+**POST** `?action=update` — actualización parcial, solo los campos que
+vengan en el body. `404` si no existe o está desactivado. `409` si el
+RUT nuevo ya lo usa otro proveedor.
 
-## Usuarios — `users.php` (T-09, pendiente)
+**POST** `?action=deactivate` — `{ "id": "UUID" }`, soft-delete
+(`is_active = 0`) — nunca se borra, `purchases.supplier_id` lo referencia.
 
-- `GET ?action=list` / `?action=workdays&user_id=UUID`
-- `POST ?action=create` / `?action=update` / `?action=activate` /
-  `?action=deactivate` / `?action=reset-password`
+## Usuarios — `users.php` — **implementado** (T-09)
 
-## Informes — `reports.php` (T-05/T-06, pendiente)
+Todo el archivo es admin-only. Mismo criterio que FERRIMIX: contraseñas
+nunca se guardan ni se devuelven en texto plano.
 
-- `GET ?action=daily-sales` / `?action=weekly-sales` / `?action=top-products`
-  / `?action=stagnant-products` / `?action=cash-summary` / `?action=margin`
-  / `?action=category-breakdown` / `?action=money-type-breakdown`
-- `GET ?action=expiring-summary` — nuevo respecto a FERRIMIX, cuenta de
-  productos por vencer/vencidos para el Dashboard.
+**GET** `?action=list` — usuarios con `days_worked`/`last_worked_on`
+derivados (D-17 de FERRIMIX, mismo criterio acá: cuenta como día
+trabajado si la persona abrió caja o vendió algo ese día — no mide horas
+ni asistencia real).
+
+**GET** `?action=workdays&user_id=UUID` — hasta 90 días, más reciente
+primero:
+```json
+{
+  "success": true,
+  "data": {
+    "user": { "id": "UUID", "username": "cajero1", "full_name": "Juan Cajero", "role": "cashier" },
+    "days": [
+      { "work_date": "2026-08-25", "sales_count": 8, "sales_total": 125000, "registers_opened": 1, "first_opened_at": "2026-08-25 08:00:00", "last_closed_at": null }
+    ]
+  },
+  "message": "Días trabajados"
+}
+```
+
+**POST** `?action=create` — `{ username, email, full_name, role, password }`.
+`password` mínimo 6 caracteres. `409` si el username o email ya existen.
+
+**POST** `?action=update` — `{ id, full_name, email, role }`. No permite
+cambiar `username`. `400` si un admin intenta quitarse su propio rol de
+admin.
+
+**POST** `?action=activate` / `?action=deactivate` — `{ id }`. `400` si
+un admin intenta desactivar su propia cuenta.
+
+**POST** `?action=reset-password` — `{ id, password }`, reemplaza el
+hash directo, sin correo de confirmación (no hay sistema de correo
+saliente en este proyecto).
+
+## Informes — `reports.php` — **implementado** (T-05/T-06)
+
+Todo el archivo es admin-only. El costo de margen/categoría usa
+`purchase_price` **actual**, no histórico (D-29, misma limitación que
+FERRIMIX). `weekly-sales`/`margin`/`category-breakdown`/
+`money-type-breakdown` aceptan `?from=YYYY-MM-DD&to=YYYY-MM-DD`
+(opcional, hasta 366 días; sin parámetros, últimos 30 días).
+
+**GET** `?action=daily-sales` — `{ today_sales, average_ticket, low_stock_count }`.
+
+**GET** `?action=weekly-sales` — un punto por día en el rango, incluye
+días en $0 (sin huecos): `[{ date, total }]`.
+
+**GET** `?action=top-products` — top 10 histórico por cantidad vendida.
+
+**GET** `?action=stagnant-products` — hasta 10 productos activos sin
+ventas en los últimos 7 días (incluye los nunca vendidos).
+
+**GET** `?action=cash-summary` — cajas abiertas/cerradas **hoy**, todos
+los cajeros.
+
+**GET** `?action=margin` — margen del rango, top 15 productos (de un
+total sin límite, usado también para el resumen):
+```json
+{
+  "success": true,
+  "data": {
+    "summary": { "revenue": 452000, "cost": 298000, "margin": 154000, "margin_pct": 34.1 },
+    "products": [{ "id": "UUID", "name": "Arroz grado 1 1kg", "sku": "ARR-01", "total_quantity": 45, "revenue": 58050, "cost": 40050, "margin": 18000, "margin_pct": 31 }]
+  },
+  "message": "Margen del rango"
+}
+```
+
+**GET** `?action=category-breakdown` — ingreso/costo/margen por
+categoría del rango. Productos sin `category_id` caen en "Sin categoría".
+
+**GET** `?action=money-type-breakdown` — ingreso y cantidad de ventas
+por `payment_method` del rango.
+
+**Exportar a Excel** no es un endpoint — `ReportsPage.tsx` arma un CSV
+en el navegador a partir de la respuesta de `margin` (`;` como
+separador, BOM UTF-8), mismo patrón que FERRIMIX.
+
+**GET** `?action=expiring-summary` — nuevo respecto a FERRIMIX, cuenta
+de productos por vencer/vencidos para el Dashboard:
+```json
+{ "success": true, "data": { "expiring_count": 3, "expired_count": 1 }, "message": "Resumen de vencimientos" }
+```
 
 ## Códigos de error
 

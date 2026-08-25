@@ -104,29 +104,40 @@ D-13 en `DECISIONS.md`).
 ```
 frontend/src/
 ├── pages/         # POS, Bodega, Recepción, Alertas, Dashboard, Informes,
-│                  # Promociones, Proveedores, Usuarios, Login
-├── components/    # Layout, RequireRole, ComingSoon
-├── components/ui/ # Primitivas hechas a mano (Radix + cva + cn()) — se
-│                  # van agregando a medida que cada pantalla las necesita
+│                  # Promociones, Proveedores, Usuarios, Login — las 10
+│                  # están implementadas (T-01 a T-09 completos)
+├── components/    # Layout, RequireRole, CashRegisterBanner,
+│                  # QuantityPromptModal, ProductFormModal, StockAdjustModal
+├── components/ui/ # Primitivas hechas a mano (Radix + cva + cn(), D-08):
+│                  # Button, Input, Label, Select, Checkbox, Badge, Dialog
 ├── store/         # Zustand: authStore (JWT + user), themeStore (claro/oscuro)
-├── lib/           # api.ts (axios + interceptor JWT), utils.ts (cn())
-├── types/         # tipos compartidos (AuthUser, ApiResponse, etc.)
+├── lib/           # api.ts (axios + interceptor JWT), utils.ts (cn()), y un
+│                  # wrapper por endpoint (products.ts, sales.ts, lots.ts, etc.)
+├── types/         # tipos compartidos (AuthUser, ApiResponse, Product, Sale, etc.)
 ├── App.tsx        # rutas + guardas de rol
 └── main.tsx        # entry point
 
 api/
-├── auth.php            # login/logout/refresh — implementado
-├── products.php, sales.php, cash_register.php, inventory.php, lots.php,
-│   promotions.php, purchases.php, suppliers.php, users.php, reports.php
-│                       # routing + control de rol correctos, acciones
-│                       # devuelven 501 hasta que se implementen (ver T-xx)
+├── auth.php, products.php, sales.php, cash_register.php, inventory.php,
+│   lots.php, promotions.php, purchases.php, suppliers.php, users.php,
+│   reports.php        # los 11 endpoints están implementados de punta a
+│                       # punta (T-01 a T-09) — ninguno devuelve 501 ya
 ├── middleware.php      # JWT, CORS, requireAuth/requireRole, helpers
 ├── config.example.php  # plantilla — config.php real NUNCA va a git
 └── db/
-    ├── schema.sql       # 15 tablas
+    ├── schema.sql       # 15 tablas (+ is_active en suppliers, D-28)
     ├── seed.sql         # categorías de ejemplo
     └── seed_admin.sql   # usuario admin/demo123
 ```
+
+**Ninguno de estos 11 endpoints se probó contra una base de datos real
+todavía** — este entorno de desarrollo no tiene PHP local instalado (se
+intentó vía winget más de una vez, el paquete está roto). Todo el
+backend está escrito y revisado a mano, con la lógica cruzada contra el
+patrón ya probado de FERRIMIX, pero antes de confiar en esto en
+producción hay que instalar PHP local o probarlo directo contra el
+hosting real. Ver `HANDOFF.md` para el detalle de qué se verificó en el
+navegador (con datos mockeados) en cada tarea.
 
 ---
 

@@ -135,36 +135,95 @@ documento de arquitectura, sección "Supuestos abiertos"):
 
 ---
 
-## Backlog — construir sobre el scaffold
+## ✅ Completado — T-05/T-06: Dashboard e Informes
 
-### T-05: Dashboard
-- **Qué falta:** `reports.php?action=daily-sales/weekly-sales/top-products/
-  expiring-summary`; `DashboardPage.tsx`.
+- **Descripción:** `reports.php` completo (`daily-sales`, `weekly-sales`,
+  `top-products`, `stagnant-products`, `cash-summary`, `margin`,
+  `category-breakdown`, `money-type-breakdown`, `expiring-summary`).
+  `DashboardPage.tsx`: 4 tarjetas de estado, gráfico de barras de los
+  últimos 30 días (CSS a mano, sin librería — D-30), top 10 productos.
+  `ReportsPage.tsx`: selector de rango de fechas + 5 pestañas (Margen,
+  Categorías, Medios de pago, Estancados, Caja del día) y "Exportar a
+  Excel" (CSV client-side, `;` + BOM, mismo patrón que FERRIMIX).
+  Decisiones D-29 y D-30.
+- **Status:** ✅ Build limpio. Verificado con mock + remount: las 4
+  tarjetas y el gráfico de 30 barras cargan con datos falsos, las 5
+  pestañas de Informes muestran sus tablas correctamente (incluida la
+  traducción de `payment_method` a español), y el botón "Exportar a
+  Excel" genera el blob/descarga sin errores (`margen.csv`).
+- **Qué NO se probó:** contra base de datos real — sigue sin haber PHP
+  local. Tampoco se descargó/inspeccionó el contenido real del CSV
+  generado, solo que la llamada no lanza excepciones.
+- Sin reporte de origen — pedido directo en el chat.
 
-### T-06: Informes
-- **Qué falta:** `reports.php?action=margin/category-breakdown/
-  money-type-breakdown/stagnant-products/cash-summary`; `ReportsPage.tsx`,
-  exportar a Excel (mismo patrón que FERRIMIX: CSV armado en el navegador,
-  no una librería nueva).
+## ✅ Completado — T-07: Promociones
 
-### T-07: Promociones
-- **Qué falta:** `promotions.php` real; `PromotionsPage.tsx` — crear/editar
-  2x1, 3x2, pack a precio fijo, asignar productos. `sales.php` ya existe
-  (T-01) pero todavía no consulta `promotions`/`promotion_products` — hay
-  que agregar esa detección dentro de `handleCreate()` (mismo lugar donde
-  hoy se procesa `discount_amount` por línea) y setear
-  `sales_details.promotion_id` cuando aplique.
+- **Descripción:** `promotions.php` (`list`/`create`/`update`/
+  `deactivate`) implementado, incluida la convención de `pack_price`
+  reutilizando `buy_quantity` como tamaño del pack (D-26).
+  `sales.php::handleCreate()` ahora detecta promociones activas por
+  producto y suma su descuento al manual de la línea (D-27).
+  `PromotionsPage.tsx`: tarjetas con descripción legible de la regla
+  ("Compra 2 y paga 1" / "Pack de 6 a $5.000"), modal de alta/edición con
+  buscador de productos tipo chips. Decisiones D-26/D-27.
+- **Status:** ✅ Build limpio. Verificado end-to-end con mock: se creó una
+  promoción nueva desde cero (nombre, tipo nxm, buscar y agregar un
+  producto, guardar) y se confirmó que el payload mandado a
+  `?action=create` es exactamente el esperado
+  (`{name, type, buy_quantity, pay_quantity, ends_at, product_ids}`), que
+  la promoción aparece en la lista con la descripción correcta, y que el
+  formulario prellena bien al editar.
+- **Nota de proceso:** durante esta verificación se persiguió una falsa
+  alarma (la búsqueda de productos "no encontraba resultados") que
+  resultó ser un problema de cómo se estaba probando, no del código — ver
+  el detalle en HANDOFF.md, vale la pena leerlo antes de la próxima
+  sesión de pruebas con mocks.
+- **Qué NO se probó:** el cálculo real del descuento de promoción dentro
+  de una venta contra una base de datos real (la lógica en
+  `computePromotionDiscount()` se revisó a mano, con ejemplos calculados
+  a mano, pero no se ejecutó contra MariaDB).
+- Sin reporte de origen — pedido directo en el chat.
 
-### T-08: Proveedores (backend parcial adelantado por T-03, ver D-24)
-- **Qué falta:** `suppliers.php?action=update`/`?action=deactivate` (solo
-  existen `list`/`create` todavía) y `SuppliersPage.tsx` — pantalla
-  dedicada de listado con edición y desactivación.
+## ✅ Completado — T-08: Proveedores (resto)
 
-### T-09: Usuarios
-- **Qué falta:** `users.php` real; `UsersPage.tsx` — crear/editar/activar/
-  desactivar/resetear contraseña, 3 roles.
+- **Descripción:** se completó lo que quedaba pendiente desde T-03:
+  `suppliers.php?action=update`/`?action=deactivate`, más la columna
+  `is_active` que faltaba en el esquema (D-28). `SuppliersPage.tsx`:
+  tabla con editar/desactivar y modal de alta/edición.
+- **Status:** ✅ Build limpio. Verificado con mock: la tabla carga, el
+  modal de edición prellena los datos del proveedor existente, y se
+  confirmó que el payload de `?action=update` refleja el cambio hecho
+  (teléfono editado) preservando el resto de los campos.
+- Sin reporte de origen — pedido directo en el chat.
+
+## ✅ Completado — T-09: Usuarios
+
+- **Descripción:** `users.php` completo (`list` con días trabajados
+  derivados — mismo criterio D-17 de FERRIMIX —, `workdays`, `create`,
+  `update`, `activate`, `deactivate`, `reset-password`), con las mismas
+  salvaguardas de FERRIMIX: un admin no puede quitarse su propio rol ni
+  desactivar su propia cuenta. `UsersPage.tsx`: tabla con las 3 acciones
+  por fila más un botón de "días trabajados" que abre el detalle.
+- **Status:** ✅ Build limpio. Verificado con mock: la tabla carga con
+  ambos roles mostrados en español, se confirmó que el botón "Desactivar"
+  está deshabilitado para el propio usuario logueado pero habilitado para
+  otros (protección D-visible en la UI, no solo en el backend), y que el
+  modal de días trabajados muestra el detalle correcto.
+- **Qué NO se probó:** creación/edición real de usuarios contra base de
+  datos, ni que un segundo intento de "quitarse el rol admin" sea
+  rechazado en el backend real (la validación se revisó a mano en
+  `users.php`, no se ejecutó).
+- Sin reporte de origen — pedido directo en el chat.
 
 ---
+
+**Con esto, T-01 a T-09 están completos.** El backlog nombrado en el
+documento de arquitectura original ya no tiene tareas pendientes — lo
+que queda son los bloqueantes de negocio de arriba (dominio/hosting,
+Composer/SSH, etc.), las ideas U-xx de abajo, y **verificar todo contra
+una base de datos real**, que ninguna sesión hasta ahora pudo hacer por
+falta de PHP local en este entorno — ver HANDOFF.md para el detalle
+completo de qué se verificó y qué no en cada tarea.
 
 ## Ideas para más adelante (U-xx)
 
@@ -181,3 +240,15 @@ documento de arquitectura, sección "Supuestos abiertos"):
   individual vía `promotion_products`).
 - **U-05:** Alcohol/tabaco — si el negocio empieza a vender esto, ver D-11
   en `DECISIONS.md` para el cambio mínimo necesario.
+- **U-06:** Continuar una recepción parcial existente — hoy
+  `RecepcionPage.tsx` siempre crea una orden nueva; recibir el saldo
+  pendiente de una orden que quedó `partial` necesita una pantalla/flujo
+  aparte.
+- **U-07:** Merma parcial de un lote desde la UI — `lots.php?action=adjust`
+  ya soporta un `quantity` parcial, pero `AlertasPage.tsx` solo ofrece
+  mermar el lote completo (D-25).
+- **U-08:** Prioridad explícita cuando un producto tiene más de una
+  promoción activa a la vez (hoy gana la primera que encuentre la
+  consulta SQL, ver D-27).
+- **U-09:** Boleta en PDF real o al menos HTML + `window.print()` — sigue
+  bloqueada por D-06 (confirmar acceso Composer/SSH del hosting real).

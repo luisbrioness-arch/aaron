@@ -114,6 +114,57 @@ function consumeStockForSale($pdo, array $product, float $quantity, array $auth,
     return $firstLotId;
 }
 
+// Promociones activas y vigentes, indexadas por product_id. Si un
+// producto está en más de una promoción activa a la vez, se usa la
+// primera que se encuentre — no se pidió que se puedan combinar/apilar,
+// y crear dos promos sobre el mismo producto es un caso raro que un
+// admin puede evitar (ver T-07 en DECISIONS.md).
+function getActivePromotionsByProduct($pdo) {
+    $sql = "SELECT pr.id, pr.type, pr.buy_quantity, pr.pay_quantity, pr.pack_price, pp.product_id
+            FROM promotions pr JOIN promotion_products pp ON pp.promotion_id = pr.id
+            WHERE pr.is_active = 1
+              AND (pr.starts_at IS NULL OR pr.starts_at <= CURDATE())
+              AND (pr.ends_at IS NULL OR pr.ends_at >= CURDATE())";
+    $map = [];
+    foreach ($pdo->query($sql)->fetchAll() as $row) {
+        $map[$row['product_id']] ??= $row;
+    }
+    return $map;
+}
+
+// nxm ("2x1", "3x2"): por cada grupo completo de buy_quantity unidades,
+// (buy_quantity - pay_quantity) salen gratis. pack_price: buy_quantity se
+// reutiliza como el tamaño del pack (ver promotions.php) — por cada pack
+// completo, el descuento es la diferencia entre el precio normal de esas
+// unidades y el precio fijo del pack.
+function computePromotionDiscount($promo, $quantity, $unitPrice) {
+    if ($promo['type'] === 'nxm') {
+        $buy = (int) $promo['buy_quantity'];
+        $pay = (int) $promo['pay_quantity'];
+        if ($buy <= 0 || $pay >= $buy) {
+            return 0.0;
+        }
+        $groups = floor($quantity / $buy);
+        return round($groups * ($buy - $pay) * $unitPrice);
+    }
+
+    if ($promo['type'] === 'pack_price') {
+        $packSize = (int) $promo['buy_quantity'];
+        if ($packSize <= 0) {
+            return 0.0;
+        }
+        $packs = floor($quantity / $packSize);
+        if ($packs <= 0) {
+            return 0.0;
+        }
+        $normalTotal = $packs * $packSize * $unitPrice;
+        $packTotal = $packs * (float) $promo['pack_price'];
+        return round(max(0, $normalTotal - $packTotal));
+    }
+
+    return 0.0;
+}
+
 function handleCreate($pdo, $auth) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         jsonResponse(false, null, 'Método no permitido', 405);
@@ -151,6 +202,7 @@ function handleCreate($pdo, $auth) {
         $lines = [];
         $grossSubtotal = 0.0;
         $lineDiscountTotal = 0.0;
+        $activePromotions = getActivePromotionsByProduct($pdo);
 
         foreach ($items as $item) {
             $productId = $item['product_id'] ?? null;
@@ -179,8 +231,13 @@ function handleCreate($pdo, $auth) {
 
             $unitPrice = (float) $product['selling_price'];
             $subtotal = round($unitPrice * $quantity, 2);
-            $lineDiscount = is_numeric($item['discount_amount'] ?? null) ? (float) $item['discount_amount'] : 0;
-            $lineDiscount = round(max(0, min($lineDiscount, $subtotal)));
+
+            $promo = $activePromotions[$productId] ?? null;
+            $promoDiscount = $promo ? computePromotionDiscount($promo, $quantity, $unitPrice) : 0.0;
+
+            $manualDiscount = is_numeric($item['discount_amount'] ?? null) ? (float) $item['discount_amount'] : 0;
+            $lineDiscount = round(max(0, min($manualDiscount + $promoDiscount, $subtotal)));
+            $promotionId = ($promo && $promoDiscount > 0) ? $promo['id'] : null;
 
             $lotId = consumeStockForSale($pdo, $product, $quantity, $auth, $saleId);
 
@@ -188,6 +245,7 @@ function handleCreate($pdo, $auth) {
                 'product_id' => $productId,
                 'product_name' => $product['name'],
                 'lot_id' => $lotId,
+                'promotion_id' => $promotionId,
                 'quantity' => $quantity,
                 'unit_price' => $unitPrice,
                 'discount_amount' => $lineDiscount,
@@ -251,8 +309,8 @@ function handleCreate($pdo, $auth) {
 
         $detailStmt = $pdo->prepare(
             'INSERT INTO sales_details
-             (id, sale_id, product_id, lot_id, quantity, unit_price, discount_amount, subtotal)
-             VALUES (:id, :sale_id, :product_id, :lot_id, :quantity, :unit_price, :discount_amount, :subtotal)'
+             (id, sale_id, product_id, lot_id, promotion_id, quantity, unit_price, discount_amount, subtotal)
+             VALUES (:id, :sale_id, :product_id, :lot_id, :promotion_id, :quantity, :unit_price, :discount_amount, :subtotal)'
         );
         foreach ($lines as $line) {
             $detailStmt->execute([
@@ -260,6 +318,7 @@ function handleCreate($pdo, $auth) {
                 ':sale_id' => $saleId,
                 ':product_id' => $line['product_id'],
                 ':lot_id' => $line['lot_id'],
+                ':promotion_id' => $line['promotion_id'],
                 ':quantity' => $line['quantity'],
                 ':unit_price' => $line['unit_price'],
                 ':discount_amount' => $line['discount_amount'],
@@ -291,6 +350,7 @@ function handleCreate($pdo, $auth) {
         'items' => array_map(fn ($l) => [
             'product_id' => $l['product_id'],
             'product_name' => $l['product_name'],
+            'promotion_id' => $l['promotion_id'],
             'quantity' => $l['quantity'],
             'unit_price' => $l['unit_price'],
             'discount_amount' => $l['discount_amount'],

@@ -13,6 +13,91 @@ las anteriores):
 
 ---
 
+## Sesión 6 — 2026-08-25
+
+Luis pidió "avanza con todo lo que falte" — se implementó el resto del
+backlog completo en una sola sesión: T-05, T-06, T-07, T-08 (resto) y
+T-09. Con esto **T-01 a T-09 quedan todos completos**.
+
+### Qué se hizo
+- **T-05/T-06 (Dashboard + Informes):** `reports.php` con las 9 acciones
+  (`daily-sales`, `weekly-sales`, `top-products`, `stagnant-products`,
+  `cash-summary`, `margin`, `category-breakdown`, `money-type-breakdown`,
+  `expiring-summary`). Aplicué proactivamente la lección de FERRIMIX D-14
+  (alias de agregación en `ORDER BY`) en `stagnant-products`, repitiendo
+  `MAX(s.created_at)` en vez de usar el alias. `DashboardPage.tsx` y
+  `ReportsPage.tsx` (5 pestañas + selector de rango + exportar a Excel,
+  CSV client-side). El gráfico de ventas es CSS puro, sin librería
+  (D-30).
+- **T-07 (Promociones):** `promotions.php` completo, más la pieza más
+  delicada de la sesión: conectar la aplicación automática dentro de
+  `sales.php::handleCreate()` — `getActivePromotionsByProduct()` +
+  `computePromotionDiscount()`, sumando el descuento de promo al manual
+  de cada línea (D-27) y reutilizando `buy_quantity` como tamaño del
+  pack para `type: "pack_price"` (D-26, documentado porque no es obvio
+  a simple vista). `PromotionsPage.tsx` con buscador de productos tipo
+  chips.
+- **T-08 (resto):** `suppliers.php?action=update/deactivate` +
+  `SuppliersPage.tsx`. Encontré que `suppliers` nunca tuvo columna
+  `is_active` en el esquema original — se agregó ahí mismo, directo en
+  `schema.sql` (D-28), no como migración aparte (no hay datos reales
+  desplegados todavía).
+- **T-09 (Usuarios):** `users.php` completo con las mismas salvaguardas
+  que FERRIMIX (un admin no puede quitarse su propio rol ni desactivarse
+  a sí mismo) y `days_worked` derivado con el mismo criterio D-17 de
+  FERRIMIX. `UsersPage.tsx` con modal de días trabajados.
+- Se borró `components/ComingSoon.tsx` — quedó sin ningún uso una vez
+  que las 9 pantallas que lo usaban como placeholder ya tienen
+  implementación real.
+- `CLAUDE.md` actualizado: la estructura de carpetas ya no dice que los
+  endpoints devuelven `501` (mentía desde hace rato).
+
+### Cómo se verificó (y un hallazgo de proceso, no de producto)
+Se repitió el patrón de mock XHR + remount por navegación de las
+sesiones anteriores, esta vez cubriendo los 5 endpoints nuevos de una
+sola vez. Se verificó en el navegador: Dashboard (4 tarjetas + gráfico
+de 30 barras + top productos), Informes (las 5 pestañas con datos
+mockeados, incluida la traducción de medios de pago, y que "Exportar a
+Excel" genera el blob sin lanzar excepciones), Promociones (**flujo
+completo de creación**: nombre, tipo, buscar y agregar un producto,
+guardar, y confirmar que el payload real coincide exactamente con lo
+esperado), Proveedores (edición con prellenado + payload de update
+correcto) y Usuarios (protección de auto-desactivación visible en la UI,
+modal de días trabajados).
+
+**Hallazgo de proceso:** al probar la búsqueda de productos dentro del
+modal de Promociones, la búsqueda pareció "no funcionar" varias veces
+seguidas — se investigó a fondo (interceptando `XMLHttpRequest.open`
+para loggear cada URL, luego cada respuesta) antes de concluir que era
+un falso positivo: combinar `dispatchEvent` + `await new Promise(setTimeout)`
++ una re-consulta del DOM **dentro de un solo script** pasado a
+`javascript_exec` da resultados inconsistentes con inputs debounced —
+separar "disparar el evento" y "esperar y verificar" en **dos llamadas
+distintas** a la herramienta lo resolvió de inmediato y de forma
+reproducible. No era un bug de `PromotionsPage.tsx`. Vale la pena
+recordar esto la próxima vez que se pruebe un input con debounce vía
+mock — evita perseguir fantasmas.
+
+### Qué falló o quedó a medias
+- **Sigue sin haber PHP local en este entorno** — los 5 endpoints nuevos
+  de esta sesión (igual que los de las 5 sesiones anteriores) están
+  escritos y revisados a mano, nunca ejecutados contra MariaDB real. Este
+  es el ítem más importante para la próxima sesión o para Luis: instalar
+  PHP local (o probar directo en el hosting una vez que exista) y correr
+  el flujo completo de punta a punta al menos una vez.
+- No se probó el cálculo real de `computePromotionDiscount()` contra una
+  venta real con datos de una base de datos — solo se revisó la fórmula
+  a mano con ejemplos (2x1 con cantidad 5 → 2 unidades gratis, etc.).
+- Quedaron anotadas 4 ideas nuevas en `NEXT_STEPS.md` (U-06 a U-09):
+  continuar una recepción parcial existente, merma parcial desde la UI,
+  prioridad explícita entre promociones superpuestas, y la boleta en PDF
+  (sigue bloqueada por D-06).
+
+### Subido directo a main / vía PR
+Sin subir todavía — pendiente de que Luis revise antes del commit.
+
+---
+
 ## Sesión 5 — 2026-08-25
 
 ### Qué se hizo

@@ -326,3 +326,78 @@ ese campo — el botón marca **todo** lo que quede del lote de una vez,
 que es el caso de uso real más común (un lote vencido se descarta
 completo). Si se necesita merma parcial desde la UI, es un input extra
 en el mismo modal/botón, no un cambio de API.
+
+## D-26 · `promotions.pack_price` reutiliza `buy_quantity` como tamaño del pack
+**2026-08-25** · Vigente
+
+El schema (T-00) no tiene una columna dedicada para "cuántas unidades
+forman el pack" en promociones tipo `pack_price` — solo `buy_quantity`,
+`pay_quantity` y `pack_price`. Al implementar T-07 se definió la
+convención: para `type = 'pack_price'`, `buy_quantity` se reutiliza como
+el tamaño del pack (cuántas unidades hay que llevar) y `pay_quantity`
+queda `NULL` (no aplica). `pack_price` sigue siendo el precio total del
+pack. Ejemplo: "pack de 6 bebidas a $5.000" → `buy_quantity = 6`,
+`pack_price = 5000`, `pay_quantity = null`.
+
+**Por qué no se agregó una columna nueva:** hubiera sido la opción más
+clara, pero el esquema ya estaba aprobado y no hay datos reales en
+juego todavía — se prefirió reutilizar antes que migrar. Si esto genera
+confusión real más adelante, una migración que agregue `pack_size` y
+deje `buy_quantity` solo para `nxm` es la limpieza correcta.
+
+## D-27 · Promociones automáticas: se suman al descuento manual, y gana la primera promo encontrada si un producto está en varias
+**2026-08-25** · Vigente
+
+Al implementar T-07 en `sales.php::handleCreate()`: si una línea tiene
+tanto un descuento manual (`items[].discount_amount`) como una promoción
+activa aplicable, **ambos se suman** en vez de que uno reemplace al
+otro — son conceptos independientes (una promo por volumen y un
+descuento discrecional del cajero pueden coexistir en la misma línea).
+El total sigue clampeado contra el subtotal de la línea, así que nunca
+puede quedar en negativo.
+
+Si un producto participa en más de una promoción activa a la vez (dos
+promos con el mismo producto, algo que un admin podría crear sin
+querer), `getActivePromotionsByProduct()` se queda con la primera que
+encuentre y descarta el resto — no se pidió que las promociones se
+puedan combinar/apilar. `promotions.php` no valida ni impide que un
+admin cree promociones superpuestas sobre el mismo producto; si eso pasa
+en la práctica, el orden de "cuál gana" depende del orden que devuelva
+la consulta SQL, no de una prioridad explícita. Suficiente para el
+alcance pedido, pero vale la pena revisarlo si el negocio empieza a usar
+promociones superpuestas de verdad.
+
+## D-28 · `suppliers` no tenía `is_active` — se agregó al implementar T-08
+**2026-08-25** · Vigente
+
+El `schema.sql` original (sesión 1) no le dio a `suppliers` una columna
+`is_active`, a diferencia de `products`/`users`. Al implementar
+`?action=deactivate` en T-08 se descubrió el hueco: no había forma de
+hacer soft-delete de un proveedor sin romper la referencia desde
+`purchases.supplier_id`. Se agregó `is_active BOOLEAN NOT NULL DEFAULT
+true` directo en `schema.sql` (no como migración aparte — no hay ninguna
+base de datos real desplegada todavía, así que no hace falta preservar
+datos existentes). `?action=list` ahora filtra `WHERE is_active = 1`.
+
+## D-29 · Costo en Informes usa `purchase_price` actual, no histórico — mismo criterio y misma limitación que FERRIMIX
+**2026-08-25** · Vigente
+
+`reports.php?action=margin/category-breakdown` (T-06) calculan el costo
+de cada línea vendida como `sd.quantity * p.purchase_price` — el costo
+**actual** del producto, no el que estaba vigente el día de esa venta
+en particular. No hay costo histórico guardado por línea de venta. Es
+una aproximación consciente, no un descuido: mismo criterio ya
+documentado en el propio FERRIMIX (su `handleMargin()`). Si un producto
+cambió mucho de costo entre la venta y hoy, el margen mostrado para ese
+período va a estar un poco desviado.
+
+## D-30 · Gráfico de ventas del Dashboard: barras CSS a mano, sin librería de gráficos
+**2026-08-25** · Vigente
+
+FERRIMIX usa Apache ECharts (cargado de forma diferida, D-22 de su
+historial) para sus gráficos. Acá, T-05 solo necesitaba un gráfico de
+barras simple (ventas de los últimos 30 días) — se implementó como un
+`<div>` por día con `height` proporcional en CSS, sin agregar ninguna
+dependencia nueva. Es suficiente para esta escala; si más adelante se
+necesitan gráficos más ricos (tooltips, zoom, múltiples series), vale la
+pena evaluar una librería recién en ese momento, no antes.
