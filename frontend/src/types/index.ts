@@ -67,3 +67,55 @@ export interface InventoryMovement {
   product_name: string;
   product_sku: string;
 }
+
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'mixed';
+export type InvoiceType = 'boleta' | 'factura';
+
+export interface CashRegisterState {
+  cash_register_id: string;
+  opening_amount: number;
+  cash_sales: number;
+  current_amount: number;
+  opened_at: string;
+  status: 'open';
+}
+
+export interface CashRegisterCloseResult {
+  cash_register_id: string;
+  opening_amount: number;
+  cash_sales: number;
+  expected_amount: number;
+  closing_amount: number;
+  difference: number;
+  status: 'closed';
+}
+
+export interface SaleItemInput {
+  product_id: string;
+  quantity: number;
+  discount_amount?: number;
+}
+
+export interface SaleItemResult {
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  discount_amount: number;
+  subtotal: number;
+}
+
+export interface SaleResult {
+  sale_id: string;
+  invoice_number: string;
+  invoice_type: InvoiceType;
+  gross_subtotal: number;
+  discount_total: number;
+  subtotal: number;
+  iva: number;
+  rounding_adjustment: number;
+  total_amount: number;
+  amount_received: number | null;
+  change_amount: number | null;
+  items: SaleItemResult[];
+}

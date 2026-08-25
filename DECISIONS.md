@@ -220,3 +220,57 @@ perecible mueve el agregado correctamente pero no actualiza
 `product_lots.quantity_remaining` de ningún lote específico — **no usar
 todavía para mermas de productos con lotes activos si se necesita
 trazabilidad exacta por lote**, eso llega con T-04.
+
+## D-18 · `sales.php?action=get` exige JWT, a diferencia del patrón público de FERRIMIX
+**2026-08-25** · Vigente
+
+FERRIMIX deja `sales.php?action=get&id=UUID` **sin autenticación a
+propósito** (su T-57): es el link que el vendedor manda por WhatsApp para
+que el cliente vea su boleta sin cuenta. Acá no se implementó ese patrón
+— no se pidió, y no había forma de decidir el criterio de seguridad
+correcto (UUID v4 impredecible, mismo argumento que D-11 de FERRIMIX) sin
+que alguien lo pidiera explícitamente. Por ahora `get` exige JWT igual que
+el resto del archivo.
+
+**Si más adelante se quiere un link de boleta compartible:** replicar el
+criterio de FERRIMIX (D-11 de su historial) — mover `requireAuth()` para
+que corra después de comprobar la acción, dejando solo `get` afuera.
+
+## D-19 · `invoice_number` se genera con `MAX + 1`, sin tabla de contador dedicada
+**2026-08-25** · Vigente
+
+Mismo patrón que `purchase_number` en FERRIMIX
+(`api/purchases.php?action=create`, según su propio `API.md`):
+`SELECT invoice_number ... ORDER BY CAST(invoice_number AS UNSIGNED) DESC
+LIMIT 1 FOR UPDATE`, dentro de la misma transacción de la venta. No
+previene una condición de carrera perfecta si dos ventas concurrentes
+llegan exactamente a la vez y la tabla está vacía (el `FOR UPDATE` no
+tiene fila que bloquear todavía) — riesgo aceptado, igual que en
+FERRIMIX, porque el proyecto confirmó **1 sola caja** para el
+lanzamiento (ver la sección de decisiones confirmadas del documento de
+arquitectura). Si algún día hay varias cajas emitiendo boletas en
+paralelo, esto necesita una tabla de contador con su propio lock
+dedicado.
+
+## D-20 · La boleta del POS es un resumen en pantalla, todavía sin PDF
+**2026-08-25** · Vigente
+
+T-01 implementó `sales.php?action=create` completo (IVA, redondeo,
+descuentos, FEFO) y `POSPage.tsx` muestra un resumen de la venta al
+cobrar, pero no genera PDF ni imprime — ver D-06, que sigue bloqueado
+hasta confirmar si el hosting real tiene Composer/SSH. Implementar la
+boleta de verdad (TCPDF/mPDF o el respaldo HTML + `window.print()`) queda
+pendiente, anotado en `NEXT_STEPS.md`.
+
+## D-21 · `payment_method: "mixed"` no tiene desglose propio
+**2026-08-25** · Vigente
+
+El schema trae `mixed` como opción válida de `payment_method` desde el
+diseño original (mismo ENUM que FERRIMIX), pero ni `sales.php` ni
+`POSPage.tsx` le dan tratamiento especial — se comporta igual que
+`card`/`transfer` (sin redondeo a $10, sin `amount_received`/vuelto). No
+se pidió una forma de registrar cuánto se pagó en efectivo vs. tarjeta
+dentro de una misma venta mixta, y el schema no tiene columnas para eso
+todavía. **Si se necesita de verdad:** agregar una tabla
+`sale_payments` (una venta, N pagos) sería el cambio correcto — no forzar
+más columnas sueltas en `sales`.

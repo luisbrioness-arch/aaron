@@ -4,6 +4,14 @@ Qué cambió en el producto, en lenguaje de usuario final. Todavía no hay
 una versión utilizable — este archivo empieza a llenarse de verdad desde
 T-01.
 
+## 2026-08-25 — Punto de venta y caja
+
+El POS ya permite cobrar: buscar productos por nombre o código de barras,
+vender por peso los productos a granel, aplicar descuentos, cobrar en
+efectivo (con vuelto y redondeo a $10) o con otros medios de pago, y
+abrir/cerrar la caja del turno. Todavía no está desplegado en ningún
+servidor real ni imprime boleta — sigue sin ser usable por el negocio.
+
 ## 2026-08-25 — Bodega (catálogo de productos)
 
 La pantalla de Bodega ya permite agregar productos, editarlos y ajustar

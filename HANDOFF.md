@@ -13,6 +13,73 @@ las anteriores):
 
 ---
 
+## Sesión 3 — 2026-08-25
+
+### Qué se hizo
+- Se implementó T-01 completo (Punto de venta + caja):
+  - `api/cash_register.php`: `open`, `close`, `current` — caja siempre
+    resuelta server-side a partir del usuario autenticado (D-07), cuadratura
+    solo considera ventas en efectivo.
+  - `api/sales.php`: `create` (IVA 19%, redondeo a $10 en efectivo,
+    descuentos por línea/boleta clampeados y redondeados a peso entero,
+    FEFO para productos con vencimiento con fallback si no hay lotes
+    todavía — D-17/D-20), `list` (3 modos: últimas 20, por día, paginado),
+    `get` (requiere JWT, a diferencia del patrón público de FERRIMIX —
+    D-18). Nueva excepción `SaleValidationException` para separar errores
+    de validación (400, con mensaje específico) de errores inesperados
+    (500 genérico).
+  - Frontend: `lib/sales.ts`, `lib/cashRegister.ts`,
+    `components/CashRegisterBanner.tsx` (con sus modales de apertura/
+    cierre), `components/QuantityPromptModal.tsx` (cantidad para
+    productos a granel), y `POSPage.tsx` — búsqueda tipo-mientras-escribes
+    como flujo principal, carrito editable, descuento por línea y por
+    boleta, selector de medio de pago, vuelto, resumen de venta al cobrar.
+  - `DECISIONS.md`: D-18 a D-21 (por qué `get` no es público, por qué el
+    número de boleta usa MAX+1 sin tabla de contador, por qué la boleta
+    todavía no es PDF, por qué `mixed` no tiene desglose propio).
+- **Verificación más profunda que en sesiones anteriores:** sin PHP local
+  para probar el backend real, se interceptaron las respuestas de
+  `products.php?action=search` a nivel de XHR en el navegador para poder
+  ejercitar el carrito completo con datos falsos controlados. Se agregó un
+  producto normal (Arroz, unidad) y uno a granel (Queso, kilos con prompt
+  de cantidad), se aplicó un descuento de línea de $100, y **se verificó a
+  mano que cada número mostrado en pantalla coincide exactamente con lo
+  que calcularía `sales.php`** (IVA redondeado, total redondeado al
+  múltiplo de $10 más cercano en efectivo) — no fue una revisión visual
+  superficial, se recalculó la aritmética esperada y se comparó contra lo
+  que renderizó React en cada paso.
+
+### Qué falló o quedó a medias
+- **Sigue sin haber PHP local.** `sales.php` y `cash_register.php` están
+  escritos y revisados línea por línea a mano (sin poder correr `php -l`
+  ni un test real), pero nunca se ejecutaron contra una base de datos.
+  Antes de confiar en esto en producción: instalar PHP local o probarlo
+  directo en el hosting real, crear una venta de verdad, y confirmar que
+  `stock_current` baja, que `cash_registers.expected_amount` cuadra al
+  cerrar, y que dos ventas seguidas no pisan el mismo `invoice_number`
+  (ver el riesgo aceptado en D-19).
+- Se intentó instalar PHP local vía `winget install PHP.PHP.8.3` para
+  poder probar de verdad — el paquete de winget está roto (404 al
+  descargar desde `downloads.php.net`). No se insistió con otras rutas
+  (Chocolatey, descarga manual) por tiempo; queda como posible mejora de
+  entorno para la próxima sesión si se quiere probar en vivo.
+- **No se construyó una grilla de productos por categoría separada** de
+  la búsqueda tipo-mientras-escribes — la lista de resultados de la
+  búsqueda cumple el rol de "respaldo" que pedía el documento de
+  arquitectura, pero no es una grilla visual navegable por categoría.
+  Simplificación de alcance, no un olvido — anotar si se necesita de
+  verdad.
+- La lógica de promociones automáticas (T-07) todavía no está conectada a
+  `sales.php` — el punto de integración queda anotado en `NEXT_STEPS.md`.
+- Boleta sigue siendo solo un resumen en pantalla, sin PDF ni impresión
+  (bloqueado por D-06, que a su vez espera confirmar si el hosting real
+  tiene Composer/SSH).
+
+### Subido directo a main / vía PR
+Sin subir todavía — pendiente de que Luis revise antes del commit.
+
+---
+
 ## Sesión 2 — 2026-08-25
 
 ### Qué se hizo

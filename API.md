@@ -148,23 +148,129 @@ patrón que FERRIMIX: nunca se borra la fila porque `sales_details` e
 
 Request: `{ "id": "UUID" }`. `404` si no existe o ya estaba desactivado.
 
-## Ventas — `sales.php` (T-01, pendiente)
+## Ventas — `sales.php` — **implementado** (T-01)
 
-- `POST ?action=create` — IVA 19%, redondeo a $10 en efectivo, descuentos
-  y promociones resueltos en servidor (nunca confiar en montos del
-  cliente), FEFO para productos con `has_expiration = true` — ver D-09/D-10
-  en `DECISIONS.md`.
-- `GET ?action=list`
-- `GET ?action=get&id=UUID`
+Todo el archivo exige JWT (`get` incluido — a diferencia de FERRIMIX, ver
+D-18 en `DECISIONS.md`, no hay link público de boleta todavía).
 
-## Caja — `cash_register.php` (T-01, pendiente)
+**POST** `?action=create`
 
-- `POST ?action=open` — `{ "opening_amount": 100000 }`
-- `POST ?action=close` — `{ "closing_amount": 250000 }`
-- `GET ?action=current`
+Request:
+```json
+{
+  "items": [
+    { "product_id": "UUID", "quantity": 2, "discount_amount": 100 },
+    { "product_id": "UUID-granel", "quantity": 0.485 }
+  ],
+  "payment_method": "cash",
+  "invoice_type": "boleta",
+  "discount_amount": 0,
+  "amount_received": 6000,
+  "customer_name": null,
+  "customer_rut": null
+}
+```
 
-La caja siempre es la del usuario autenticado, resuelta server-side — ver
-D-07 en `DECISIONS.md`.
+El precio de cada línea se recalcula del lado del servidor a partir de
+`products.selling_price` — el precio que mande el cliente se ignora.
+`cash_register_id` lo determina el servidor buscando la caja abierta del
+usuario autenticado (D-07); si no tiene caja abierta, la venta se permite
+igual con `cash_register_id = NULL`. Todo corre en una transacción con
+`SELECT ... FOR UPDATE` por producto.
+
+`items[].discount_amount` (por línea) y el `discount_amount` de nivel
+raíz (sobre la boleta completa) son opcionales, siempre en pesos, nunca
+porcentaje — el servidor los clampea contra el subtotal real (un
+descuento no puede superar el subtotal de su línea, ni dejar la venta en
+negativo), y los redondea a peso entero. El de línea se aplica primero;
+el de boleta se calcula sobre lo que queda.
+
+**Redondeo (Chile, D-19 style — mismo criterio que FERRIMIX D-29):** si
+`payment_method` es `"cash"`, `total_amount` se redondea al múltiplo de
+$10 más cercano. `card`/`transfer`/`mixed` cobran el monto exacto.
+
+**FEFO para productos con `has_expiration = true`** (D-09): se descuenta
+primero del lote que vence antes. Si el producto no tiene lotes cargados
+todavía, se descuenta el agregado igual (ver D-17).
+
+`amount_received` (opcional, solo con `payment_method: "cash"`): si viene,
+el servidor calcula `change_amount` contra su propio total (nunca contra
+uno mandado por el cliente) y responde `400` si el efectivo no alcanza.
+Mandarlo con otro método de pago responde `400`.
+
+Response (201):
+```json
+{
+  "success": true,
+  "data": {
+    "sale_id": "UUID",
+    "invoice_number": "000001",
+    "invoice_type": "boleta",
+    "gross_subtotal": 30000,
+    "discount_total": 1500,
+    "subtotal": 28500,
+    "iva": 5415,
+    "rounding_adjustment": 0,
+    "total_amount": 33920,
+    "amount_received": 40000,
+    "change_amount": 6080,
+    "items": [
+      { "product_id": "UUID", "product_name": "Arroz grado 1 1kg", "quantity": 2, "unit_price": 1290, "discount_amount": 0, "subtotal": 2580 }
+    ]
+  },
+  "message": "Venta completada"
+}
+```
+
+Error (400) — stock insuficiente, carrito vacío, efectivo insuficiente o
+método/tipo inválido:
+```json
+{ "success": false, "data": null, "message": "Stock insuficiente de \"Queso Gouda al corte\" (disponible: 4.2)" }
+```
+
+**GET** `?action=list` — tres modos, sin mezclarlos:
+- Sin parámetros: últimas 20 ventas.
+- `?date=YYYY-MM-DD`: ventas de un día, hasta 100.
+- `?page=N`: paginado, 15 por página —
+  `{ sales: [...], page, per_page, total, total_pages }`.
+
+**GET** `?action=get&id=UUID` — detalle completo con líneas, para el
+resumen en pantalla del POS (todavía sin PDF/impresión, ver D-20).
+
+## Caja — `cash_register.php` — **implementado** (T-01)
+
+Todas requieren JWT. La caja siempre es la del usuario autenticado,
+resuelta server-side (D-07) — no se puede abrir/cerrar la caja de otra
+persona ni mandar un `cash_register_id` desde el cliente.
+
+**POST** `?action=open` — `{ "opening_amount": 100000 }`. `400` si el
+usuario ya tiene una caja abierta.
+
+**POST** `?action=close` — `{ "closing_amount": 250000 }`. La cuadratura
+solo considera ventas en efectivo (`payment_method = 'cash'`).
+```json
+{
+  "success": true,
+  "data": {
+    "cash_register_id": "UUID", "opening_amount": 100000, "cash_sales": 135700,
+    "expected_amount": 235700, "closing_amount": 250000, "difference": 14300, "status": "closed"
+  },
+  "message": "Caja cerrada"
+}
+```
+
+**GET** `?action=current` — caja abierta del usuario actual, o
+`data: null` si no tiene ninguna.
+```json
+{
+  "success": true,
+  "data": {
+    "cash_register_id": "UUID", "opening_amount": 50000, "cash_sales": 187400,
+    "current_amount": 237400, "opened_at": "2026-08-25 08:55:12", "status": "open"
+  },
+  "message": "Caja actual"
+}
+```
 
 ## Bodega — `inventory.php` — **implementado** (T-02)
 
