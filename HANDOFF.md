@@ -13,6 +13,47 @@ las anteriores):
 
 ---
 
+## Sesión 5 — 2026-08-25
+
+### Qué se hizo
+- Se implementó T-04 completo (Vencimientos y alertas):
+  - `api/lots.php`: `expiring` (lotes dentro de
+    `EXPIRATION_WARNING_DAYS`), `expired`, `adjust` (marca un lote como
+    merma — crea `inventory_movements` tipo `loss`, descuenta
+    `product_lots.quantity_remaining` y `products.stock_current`, todo en
+    transacción con `FOR UPDATE`).
+  - `frontend/src/lib/lots.ts` y `AlertasPage.tsx` — tres secciones
+    (Vencidos, Por vencer, Stock bajo), esta última reutilizando
+    `products.php?action=low-stock` que ya existía desde T-02. El botón
+    "Marcar merma" solo aparece en Vencidos, nunca en Por vencer (D-25).
+  - `DECISIONS.md`: D-25.
+- **Verificación con el mismo patrón que ya funcionó en la sesión
+  anterior** (mock de XHR instalado, remount vía clic en links de React
+  Router para que el `useEffect` de carga se dispare de nuevo con el mock
+  activo): las tres secciones mostraron datos falsos correctamente
+  formateados — fechas en español (`24 ago 2026`), badge de días
+  restantes para "por vencer". Se probó el flujo completo de "Marcar
+  merma": se auto-confirmó el `window.confirm()` del navegador, se
+  inspeccionó el payload real mandado a `lots.php?action=adjust`
+  (`{ lot_id: "lot2" }`, sin `quantity` — confirmando que el default de
+  "todo el lote" funciona como se diseñó) y se confirmó que la fila
+  desaparece de la lista tras la respuesta exitosa.
+
+### Qué falló o quedó a medias
+- **Sigue sin haber PHP local** — no se reintentó la instalación esta
+  vez (ya se intentó dos sesiones seguidas con el mismo error de winget,
+  no vale la pena insistir sin una alternativa nueva). `lots.php` está
+  revisado a mano, sin ejecutar contra MariaDB.
+- La UI no expone mermar solo una parte de un lote (la API sí lo soporta
+  vía `quantity` opcional) — decisión de alcance, no un olvido, ver D-25.
+- No se agregó ninguna alerta a un Dashboard todavía porque `DashboardPage.tsx`
+  sigue siendo un placeholder (T-05) — `AlertasPage.tsx` es autónoma.
+
+### Subido directo a main / vía PR
+Sin subir todavía — pendiente de que Luis revise antes del commit.
+
+---
+
 ## Sesión 4 — 2026-08-25
 
 ### Qué se hizo

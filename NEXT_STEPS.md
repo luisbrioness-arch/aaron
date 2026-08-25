@@ -112,12 +112,30 @@ documento de arquitectura, sección "Supuestos abiertos"):
 
 ---
 
-## Backlog — construir sobre el scaffold
+## ✅ Completado — T-04: Vencimientos y alertas
 
-### T-04: Vencimientos y alertas
-- **Qué falta:** `lots.php` real; `AlertasPage.tsx` — stock bajo (ya
-  existía el patrón) + por vencer/vencido (nuevo), con acción rápida
-  "marcar como merma".
+- **Descripción:** `lots.php` (`expiring`/`expired`/`adjust`)
+  implementado; `AlertasPage.tsx` con tres secciones (Vencidos, Por
+  vencer, Stock bajo — esta última reutiliza
+  `products.php?action=low-stock` de T-02) y el botón "Marcar merma" solo
+  en la sección Vencidos (D-25: no tiene sentido descartar algo que
+  todavía no venció). Decisión nueva D-25.
+- **Status:** ✅ Build limpio. Verificado con el mismo patrón de mock +
+  remount de la sesión anterior: las tres secciones cargan datos falsos
+  correctamente formateados (fechas en español, badge de "X días" para
+  por vencer), y se probó el flujo completo de "Marcar merma" — se
+  confirmó que el payload enviado es solo `{ lot_id }` (sin `quantity`,
+  como corresponde al comportamiento "todo el lote" por defecto) y que la
+  fila desaparece de la lista de Vencidos tras la respuesta exitosa.
+- **Qué NO se probó:** contra base de datos real — sigue sin haber PHP
+  local (mismo límite que las tareas anteriores). No se expuso en la UI
+  la opción de mermar solo una parte de un lote (la API sí la soporta vía
+  `quantity`, ver D-25).
+- Sin reporte de origen — pedido directo en el chat.
+
+---
+
+## Backlog — construir sobre el scaffold
 
 ### T-05: Dashboard
 - **Qué falta:** `reports.php?action=daily-sales/weekly-sales/top-products/

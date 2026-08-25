@@ -4,6 +4,13 @@ Qué cambió en el producto, en lenguaje de usuario final. Todavía no hay
 una versión utilizable — este archivo empieza a llenarse de verdad desde
 T-01.
 
+## 2026-08-25 — Alertas de stock y vencimientos
+
+Nueva pantalla de Alertas: productos con stock bajo, productos por vencer
+en los próximos días, y productos ya vencidos con un botón para
+descartarlos como merma en un clic. Todavía no está desplegado en ningún
+servidor real.
+
 ## 2026-08-25 — Recepción de compras
 
 Bodega ya puede recibir mercadería: elegir el proveedor (o darlo de alta

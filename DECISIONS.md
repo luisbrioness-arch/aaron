@@ -312,3 +312,17 @@ de `RecepcionPage.tsx` (`SupplierQuickAddModal`). Lo que falta de T-08 es
 dedicada (`SuppliersPage.tsx`, listado completo con edición/
 desactivación) — `NEXT_STEPS.md` se actualizó para reflejar que ya no es
 el CRUD completo desde cero, solo la mitad que faltaba.
+
+## D-25 · "Marcar como merma" solo aparece para lotes vencidos, y siempre descarta el lote completo
+**2026-08-25** · Vigente
+
+`AlertasPage.tsx` (T-04) solo ofrece el botón "Marcar merma" en la
+sección Vencidos, no en Por vencer — no tiene sentido descartar stock que
+todavía no venció, la alerta de "por vencer" es para que alguien lo
+priorice en la góndola o en una promoción, no para tirarlo. `lots.php?
+action=adjust` sí acepta un `quantity` parcial (por si en el futuro hace
+falta mermar solo una parte de un lote), pero la UI actual siempre omite
+ese campo — el botón marca **todo** lo que quede del lote de una vez,
+que es el caso de uso real más común (un lote vencido se descarta
+completo). Si se necesita merma parcial desde la UI, es un input extra
+en el mismo modal/botón, no un cambio de API.

@@ -307,17 +307,54 @@ promedio diario. Se implementa junto con T-05.
 `products.stock_current` en agregado, no bajan a nivel de `product_lots`
 todavía — eso es trabajo de T-04.
 
-## Vencimientos — `lots.php` (T-04, pendiente)
+## Vencimientos — `lots.php` — **implementado** (T-04)
 
-Nuevo respecto a FERRIMIX.
+Nuevo respecto a FERRIMIX. Todo el archivo exige rol `admin` o
+`warehouse_staff`.
 
-- `GET ?action=expiring` — lotes con `expiration_date` dentro de
-  `EXPIRATION_WARNING_DAYS` (config.php, default 7 días) y
-  `quantity_remaining > 0`.
-- `GET ?action=expired` — `expiration_date < hoy` y `quantity_remaining > 0`.
-- `POST ?action=adjust` — marca un lote vencido como merma (crea
-  `inventory_movements` tipo `loss`), acción explícita de bodega, nunca
-  automática.
+**GET** `?action=expiring` — lotes con `expiration_date` dentro de
+`EXPIRATION_WARNING_DAYS` (config.php, default 7 días) y
+`quantity_remaining > 0`, ordenados por fecha más próxima primero.
+
+**GET** `?action=expired` — `expiration_date < hoy` y
+`quantity_remaining > 0`, mismo orden.
+
+Ambas devuelven la misma forma:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "UUID-lote", "product_id": "UUID", "lot_code": "L-0847",
+      "expiration_date": "2026-08-24", "quantity_remaining": 6,
+      "product_name": "Yogurt Batido 1L", "sku": "YOG-01", "unit_of_measure": "units",
+      "days_until_expiration": -1
+    }
+  ],
+  "message": "Lotes vencidos"
+}
+```
+`days_until_expiration` es negativo para lotes ya vencidos.
+
+**POST** `?action=adjust` — marca un lote como merma: crea un
+`inventory_movements` tipo `loss` (con `lot_id`) y descuenta tanto
+`product_lots.quantity_remaining` como `products.stock_current`. Acción
+explícita de bodega, nunca automática (D-25 — en la UI solo aparece para
+lotes ya vencidos, no para "por vencer").
+
+Request:
+```json
+{ "lot_id": "UUID-lote", "quantity": 6, "reason": "opcional" }
+```
+`quantity` es opcional — si se omite, se marca como merma **todo** lo
+que quede del lote (el caso de uso real más común, ver D-25). `400` si
+`quantity` supera `quantity_remaining`. `reason` por defecto es
+"Producto vencido".
+
+Response:
+```json
+{ "success": true, "data": { "lot_id": "UUID-lote", "quantity_adjusted": 6, "quantity_remaining": 0 }, "message": "Merma registrada" }
+```
 
 ## Promociones — `promotions.php` (T-07, pendiente)
 
