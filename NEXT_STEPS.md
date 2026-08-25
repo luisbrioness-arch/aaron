@@ -28,6 +28,24 @@ documento de arquitectura, sección "Supuestos abiertos"):
   más abajo en `CLAUDE.md`).
 - Sin reporte de origen — pedido directo en el chat.
 
+## ✅ Completado — T-02: Bodega (catálogo de productos)
+
+- **Descripción:** `products.php` (search/list paginado/low-stock/
+  categories/create/update/deactivate) e `inventory.php`
+  (movement/list) implementados de punta a punta; `BodegaPage.tsx` con
+  búsqueda, filtro por categoría, paginación, alta/edición de producto
+  (`ProductFormModal`) y ajuste de stock (`StockAdjustModal`), todo
+  reactivo al rol (cajero ve la tabla en solo lectura). Decisiones
+  registradas en D-14 a D-17 de `DECISIONS.md`.
+- **Status:** ✅ Build limpio. Verificado en navegador simulando sesión de
+  admin (sin backend PHP real disponible): la página carga, el error de
+  conexión se maneja con gracia, el modal "Agregar producto" abre con los
+  11 campos esperados. **No probado contra una base de datos real** — no
+  hay PHP local instalado en este entorno (mismo límite que T-anterior).
+- `reorder-suggestions` de `inventory.php` queda pendiente a propósito
+  (responde `501`) — depende de ventas reales de T-01, ver D-16.
+- Sin reporte de origen — pedido directo en el chat.
+
 ---
 
 ## Backlog — construir sobre el scaffold
@@ -42,12 +60,8 @@ documento de arquitectura, sección "Supuestos abiertos"):
 - **Reglas de negocio a respetar:** IVA 19%, redondeo solo en efectivo,
   descuentos siempre en pesos y clampeados server-side, FEFO para
   productos con `has_expiration = true` (D-09).
-
-### T-02: Bodega
-- **Qué falta:** `products.php` (create/rename/deactivate) e
-  `inventory.php` reales; `BodegaPage.tsx` — catálogo, alta/edición de
-  productos (código de barras, granel, vencimiento, categoría), ajuste de
-  stock manual (merma, corrección).
+- Una vez implementado, desbloquea `inventory.php?action=reorder-suggestions`
+  (D-16).
 
 ### T-03: Recepción de compras
 - **Qué falta:** `purchases.php` real; `RecepcionPage.tsx` — pensada para

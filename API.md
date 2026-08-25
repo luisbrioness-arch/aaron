@@ -71,26 +71,82 @@ El frontend además esconde rutas/botones según el rol
 (`RequireRole.tsx`, `Layout.tsx`), pero es el backend el que realmente lo
 hace cumplir.
 
-## Productos — `products.php` (T-01/T-02, pendiente)
+## Productos — `products.php` — **implementado** (T-02)
 
-- `GET ?action=search&q=...&category=...` — por SKU, código de barras o nombre.
-- `GET ?action=list` — todos los productos activos.
-- `GET ?action=low-stock` — `stock_current <= stock_critical`.
-- `GET ?action=categories`
-- `POST ?action=create` / `?action=rename` / `?action=deactivate`
+Todas las acciones requieren JWT. `create`/`update`/`deactivate` exigen
+además rol `admin` o `warehouse_staff` (ver D-14 en `DECISIONS.md` sobre
+por qué hay `update` completo y no solo `rename` como en FERRIMIX).
 
-Forma de producto esperada (igual base que FERRIMIX + los campos nuevos):
+**GET** `?action=search&q=...&category=...` — por SKU, código de barras o
+nombre (`LIKE %q%`), hasta 50 resultados. Pensado para el flujo de
+escaneo del POS (T-01).
+
+**GET** `?action=list&page=N&q=...&category=...` — catálogo paginado, 30
+por página (ver D-15). `q`/`category` son opcionales, filtran igual que
+`search`.
 ```json
 {
-  "id": "UUID",
-  "sku": "...", "barcode": "...", "name": "...",
-  "unit_of_measure": "units | kilos | liters",
-  "is_scale_item": false,
-  "has_expiration": false,
-  "price": 0, "stock": 0, "stock_critical": 0, "is_low_stock": false,
-  "category": { "id": "UUID", "name": "..." }
+  "success": true,
+  "data": {
+    "products": [ /* forma de producto, ver abajo */ ],
+    "page": 1, "per_page": 30, "total": 214, "total_pages": 8
+  },
+  "message": "Productos listados"
 }
 ```
+
+**GET** `?action=low-stock` — `stock_current <= stock_critical`, hasta 100.
+
+**GET** `?action=categories` — `{ id, name, icon }[]`.
+
+Forma de producto (las 4 acciones de lectura devuelven esto):
+```json
+{
+  "id": "UUID", "sku": "ARR-01", "barcode": "7801234500001",
+  "name": "Arroz grado 1 1kg", "description": null, "image_url": null,
+  "unit_of_measure": "units", "is_scale_item": false, "has_expiration": false,
+  "purchase_price": 890, "selling_price": 1290,
+  "stock_current": 42, "stock_critical": 10, "is_low_stock": false,
+  "is_active": true,
+  "category": { "id": "UUID", "name": "Almacén" },
+  "supplier": { "id": "UUID", "name": "Distribuidora XYZ" }
+}
+```
+
+**POST** `?action=create`
+
+Request:
+```json
+{
+  "sku": "ARR-01", "barcode": "7801234500001", "name": "Arroz grado 1 1kg",
+  "category_id": "UUID o null", "supplier_id": "UUID o null",
+  "unit_of_measure": "units", "is_scale_item": false, "has_expiration": false,
+  "purchase_price": 890, "selling_price": 1290,
+  "stock_critical": 10, "stock_current": 50
+}
+```
+`sku`, `name`, `purchase_price`, `selling_price` son obligatorios.
+`unit_of_measure` debe ser `units`/`kilos`/`liters`. `409` si el SKU o
+código de barras ya existe. Si `stock_current` viene > 0, se registra
+también como `inventory_movements` tipo `in` ("Carga inicial de stock")
+— nunca se toca `stock_current` sin dejar rastro.
+
+**POST** `?action=update` — actualización parcial, solo los campos que
+vengan en el body (excepto `stock_current`, que no es editable acá — usa
+`inventory.php?action=movement`, ver D-14).
+
+Request:
+```json
+{ "id": "UUID", "selling_price": 1350, "stock_critical": 15 }
+```
+`404` si no existe o está desactivado. `409` si el código de barras nuevo
+ya lo usa otro producto.
+
+**POST** `?action=deactivate` — soft-delete (`is_active = 0`), mismo
+patrón que FERRIMIX: nunca se borra la fila porque `sales_details` e
+`inventory_movements` la referencian.
+
+Request: `{ "id": "UUID" }`. `404` si no existe o ya estaba desactivado.
 
 ## Ventas — `sales.php` (T-01, pendiente)
 
@@ -110,11 +166,40 @@ Forma de producto esperada (igual base que FERRIMIX + los campos nuevos):
 La caja siempre es la del usuario autenticado, resuelta server-side — ver
 D-07 en `DECISIONS.md`.
 
-## Bodega — `inventory.php` (T-02, pendiente)
+## Bodega — `inventory.php` — **implementado** (T-02)
 
-- `POST ?action=movement` — `{ "product_id", "movement_type": "in|out|adjustment|loss", "quantity", "reason", "unit_cost"? }`
-- `GET ?action=list`
-- `GET ?action=reorder-suggestions`
+Todo el archivo exige rol `admin` o `warehouse_staff`.
+
+**POST** `?action=movement`
+
+Request:
+```json
+{ "product_id": "UUID", "movement_type": "in", "quantity": 10, "reason": "Reposición", "unit_cost": 890 }
+```
+`movement_type`: `in` (siempre suma) | `out`/`loss` (siempre restan,
+`quantity` debe ser positivo) | `adjustment` (`quantity` puede ser
+negativo). Rechaza con `400` si el movimiento dejaría `stock_current`
+negativo. `unit_cost` solo es válido con `in` — si viene, además de
+guardarse en el movimiento actualiza `products.purchase_price` (igual
+patrón que FERRIMIX). Usa `SELECT ... FOR UPDATE` dentro de una
+transacción para que dos ajustes simultáneos no se pisen.
+
+Response:
+```json
+{ "success": true, "data": { "product_id": "UUID", "stock_before": 32, "stock_after": 42 }, "message": "Movimiento registrado" }
+```
+
+**GET** `?action=list` — últimos 50 movimientos, con nombre/SKU del
+producto.
+
+**GET** `?action=reorder-suggestions` — **sin implementar todavía**
+(responde `501`), se queda en este archivo a propósito (ver D-16 en
+`DECISIONS.md`): depende de tener ventas reales (T-01) para calcular el
+promedio diario. Se implementa junto con T-05.
+
+**Nota (D-17):** los ajustes de este endpoint operan sobre
+`products.stock_current` en agregado, no bajan a nivel de `product_lots`
+todavía — eso es trabajo de T-04.
 
 ## Vencimientos — `lots.php` (T-04, pendiente)
 

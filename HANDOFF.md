@@ -13,6 +13,52 @@ las anteriores):
 
 ---
 
+## Sesión 2 — 2026-08-25
+
+### Qué se hizo
+- Se implementó T-02 completo (Bodega/catálogo de productos):
+  - `api/products.php`: `search`, `list` (paginado, 30/página — ver D-15),
+    `low-stock`, `categories`, `create`, `update` (parcial, sin tocar
+    `stock_current` — ver D-14), `deactivate`. `create` con stock inicial
+    también deja un `inventory_movements` de entrada.
+  - `api/inventory.php`: `movement` (con `SELECT ... FOR UPDATE` dentro de
+    una transacción, valida que el stock no quede negativo, actualiza
+    `purchase_price` si viene `unit_cost` en una entrada) y `list`.
+    `reorder-suggestions` queda pendiente (501) — ver D-16.
+  - Frontend: `components/ui/{Button,Input,Badge,Dialog}.tsx` (primitivas
+    a mano, Radix + cva — ver D-08), `ProductFormModal.tsx`,
+    `StockAdjustModal.tsx`, y `BodegaPage.tsx` real (búsqueda, filtro por
+    categoría, paginación, tabla con chips de stock bajo/granel/
+    vencimiento, acciones solo visibles para admin/bodega).
+  - `API.md` y `DECISIONS.md` actualizados con el contrato real (D-14 a
+    D-17).
+- Se verificó en el navegador simulando una sesión de admin (localStorage
+  con el store de Zustand persistido a mano, porque no hay backend PHP
+  real para loguearse de verdad): la página carga, el filtro de
+  categorías no revienta la consola cuando el backend no responde (se
+  encontró y arregló una promesa sin `.catch()` que generaba un error no
+  capturado), y el modal "Agregar producto" abre con los 11 campos
+  esperados.
+
+### Qué falló o quedó a medias
+- **Sigue sin haber PHP local en esta máquina.** Todo lo de `api/` está
+  escrito y revisado a ojo, pero ni `products.php` ni `inventory.php` se
+  ejecutaron contra una base de datos real — la próxima sesión (o Luis)
+  debería instalar PHP local y correr el flujo completo (crear producto,
+  editarlo, ajustar stock, ver que `stock_current` cuadre) antes de
+  confiar en que el SQL está bien.
+- No se probó el caso de "producto con `has_expiration = true`" en la UI
+  más allá del checkbox — la lógica real de lotes es T-04, a propósito
+  (ver D-17).
+- `BodegaPage.tsx` en modo cajero (solo lectura) no se verificó
+  visualmente, solo por lectura de código — debería confirmarse que la
+  columna "Acciones" y los modales realmente no aparecen con ese rol.
+
+### Subido directo a main / vía PR
+Sin subir todavía — pendiente de que Luis revise antes del commit.
+
+---
+
 ## Sesión 1 — 2026-08-24
 
 ### Qué se hizo

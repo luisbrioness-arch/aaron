@@ -168,3 +168,55 @@ verifica hashes `$2a$`/`$2b$` igual que los `$2y$` que produce su propio
 
 Usuario `admin`, contraseña `demo123` — **cambiar antes de usar esto en
 producción de verdad.**
+
+## D-14 · `products.php` tiene `update` completo, no solo `rename`
+**2026-08-25** · Vigente
+
+FERRIMIX solo tiene `?action=rename` (edita únicamente el nombre) como
+decisión deliberada de alcance mínimo. Acá se implementó `?action=update`
+completo (nombre, código de barras, categoría, proveedor, unidad de
+medida, granel, vencimiento, precios, stock crítico) porque el catálogo de
+un minimarket es mucho más grande y cambia más seguido — limitar a solo
+renombrar habría sido insuficiente desde el primer día. `stock_current`
+sigue **fuera** de `update` a propósito: todo cambio de stock pasa por
+`inventory.php?action=movement` para dejar rastro en `inventory_movements`
+— nunca se edita el número directamente.
+
+## D-15 · `products.php?action=list` paginado (30 por página)
+**2026-08-25** · Vigente
+
+FERRIMIX devuelve el catálogo completo sin paginar en `list` — funciona
+porque una ferretería tiene decenas o pocos cientos de SKU. El documento
+de arquitectura señaló explícitamente que un minimarket puede tener miles;
+devolver todo de una vez en cada carga de Bodega no escala. `list` pagina
+igual que `sales.php?action=list&page=N` en FERRIMIX (mismo patrón,
+aplicado a productos en vez de ventas).
+
+## D-16 · `reorder-suggestions` sigue en `inventory.php`, pero su implementación se pospuso
+**2026-08-25** · Vigente
+
+`API.md` original (T-02) incluía `inventory.php?action=reorder-suggestions`
+en el mismo lote que `movement`/`list`. Al implementar T-02 se decidió
+posponer solo esa acción (queda respondiendo `501`): el cálculo depende de
+`avg_daily_sales` sobre los últimos 30 días de `sales`, que todavía no
+existe como tabla con datos reales (T-01 sigue sin implementar).
+Escribirlo ahora habría sido código imposible de probar o verificar.
+
+**Se queda en `inventory.php` a propósito, no se mueve a `reports.php`:**
+es bodega/admin quien reordena stock, no solo admin — moverlo a
+`reports.php` (admin-only) le habría quitado acceso a `warehouse_staff`
+sin motivo. Se implementa quando haya datos reales de venta (en paralelo
+a T-01/T-05), quedando donde el rol correcto ya lo protege.
+
+## D-17 · Los ajustes de stock de T-02 no tocan `product_lots` todavía
+**2026-08-25** · Vigente
+
+`inventory.php?action=movement` (T-02) opera sobre `products.stock_current`
+en agregado, sin bajar a nivel de lote — incluso para productos con
+`has_expiration = true`. Bajar a nivel de lote (elegir de qué lote
+concreto se resta una merma, o aplicar FEFO) es responsabilidad de T-04,
+que todavía no está implementado. Por ahora, ajustar stock de un producto
+perecible mueve el agregado correctamente pero no actualiza
+`product_lots.quantity_remaining` de ningún lote específico — **no usar
+todavía para mermas de productos con lotes activos si se necesita
+trazabilidad exacta por lote**, eso llega con T-04.
