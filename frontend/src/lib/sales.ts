@@ -7,6 +7,7 @@ export interface CreateSaleInput {
   invoice_type?: InvoiceType;
   discount_amount?: number;
   amount_received?: number;
+  customer_id?: string;
   customer_name?: string;
   customer_rut?: string;
 }

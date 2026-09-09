@@ -13,6 +13,7 @@ import {
   PromotionsPage,
   SuppliersPage,
   UsersPage,
+  CustomersPage,
 } from '@/pages';
 
 function HomeRedirect() {
@@ -35,6 +36,14 @@ export default function App() {
           element={
             <RequireRole allowed={['cashier', 'admin']}>
               <POSPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/clientes"
+          element={
+            <RequireRole allowed={['cashier', 'admin']}>
+              <CustomersPage />
             </RequireRole>
           }
         />

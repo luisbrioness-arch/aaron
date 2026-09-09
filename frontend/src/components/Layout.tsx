@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   ShieldCheck,
+  BookOpen,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
@@ -33,6 +34,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/pos', label: 'Punto de Venta', icon: ShoppingCart, roles: ['cashier', 'admin'], group: 'operaciones' },
+  { to: '/clientes', label: 'Clientes y Fiados', icon: BookOpen, roles: ['cashier', 'admin'], group: 'operaciones' },
   { to: '/bodega', label: 'Bodega y Stock', icon: Boxes, roles: ['cashier', 'warehouse_staff', 'admin'], group: 'operaciones' },
   { to: '/recepcion', label: 'Recepción Compras', icon: PackagePlus, roles: ['warehouse_staff', 'admin'], group: 'operaciones' },
   { to: '/alertas', label: 'Alertas y Vencimientos', icon: AlertTriangle, roles: ['warehouse_staff', 'admin'], group: 'operaciones' },

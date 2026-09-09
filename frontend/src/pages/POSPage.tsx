@@ -14,15 +14,20 @@ import {
   CheckCircle2,
   ShoppingBag,
   RotateCcw,
+  Printer,
+  BookOpen,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
+import { Dialog, DialogContent } from '@/components/ui/Dialog';
 import { CashRegisterBanner } from '@/components/CashRegisterBanner';
 import { QuantityPromptModal } from '@/components/QuantityPromptModal';
 import { searchProducts } from '@/lib/products';
 import { createSale } from '@/lib/sales';
-import type { PaymentMethod, Product, SaleResult } from '@/types';
+import { listCustomers } from '@/lib/customers';
+import type { Customer, PaymentMethod, Product, SaleResult } from '@/types';
 
 interface CartLine {
   product: Product;
@@ -64,7 +69,21 @@ export function POSPage() {
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<SaleResult | null>(null);
   const [registerRefreshKey, setRegisterRefreshKey] = useState(0);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function parseScaleBarcode(code: string): { skuOrBarcode: string; weightKg: number } | null {
+    if (/^(20|21)\d{11}$/.test(code)) {
+      const plu = code.slice(2, 7);
+      const weightGrams = parseInt(code.slice(7, 12), 10);
+      return {
+        skuOrBarcode: plu,
+        weightKg: weightGrams / 1000,
+      };
+    }
+    return null;
+  }
 
   useEffect(() => {
     if (!query.trim()) {
@@ -109,6 +128,22 @@ export function POSPage() {
     e.preventDefault();
     const trimmed = query.trim();
     if (!trimmed) return;
+
+    // Detectar código de balanza (prefijo 20 o 21 con 13 dígitos)
+    const scaleData = parseScaleBarcode(trimmed);
+    if (scaleData) {
+      const match = results.find(
+        (p) =>
+          p.sku === scaleData.skuOrBarcode ||
+          p.barcode === scaleData.skuOrBarcode ||
+          (p.barcode && p.barcode.endsWith(scaleData.skuOrBarcode)),
+      );
+      if (match) {
+        addToCart(match, scaleData.weightKg);
+        return;
+      }
+    }
+
     const exact = results.find((p) => p.barcode === trimmed);
     if (exact) {
       handlePick(exact);
@@ -154,6 +189,12 @@ export function POSPage() {
       return;
     }
 
+    if (paymentMethod === 'credit' && !selectedCustomer) {
+      setCustomerPickerOpen(true);
+      setError('Debes seleccionar a qué vecino o cliente se le anota el fiado');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await createSale({
@@ -163,6 +204,8 @@ export function POSPage() {
           discount_amount: l.discountAmount || undefined,
         })),
         payment_method: paymentMethod,
+        customer_id: selectedCustomer?.id,
+        customer_name: selectedCustomer?.name,
         discount_amount: Number(saleDiscountInput) || undefined,
         amount_received: paymentMethod === 'cash' && amountReceived ? receivedNumber : undefined,
       });
@@ -170,7 +213,7 @@ export function POSPage() {
         setError(res.message || 'No se pudo registrar la venta');
         return;
       }
-      setReceipt(res.data);
+      setReceipt({ ...res.data, payment_method: res.data.payment_method || paymentMethod });
       setCart([]);
       setSaleDiscountInput('0');
       setAmountReceived('');
@@ -184,8 +227,84 @@ export function POSPage() {
 
   // Vista de comprobante / Ticket completado
   if (receipt) {
+    const paymentLabels: Record<string, string> = {
+      cash: 'Efectivo',
+      card: 'Tarjeta Débito/Crédito',
+      transfer: 'Transferencia Bancaria',
+      mixed: 'Pago Mixto',
+      credit: 'Fiado / Cta. Corriente',
+    };
+
     return (
       <div className="mx-auto max-w-md py-6 animate-in fade-in zoom-in-95">
+        {/* Ticket Térmico Oculto en pantalla, visible solo al imprimir vía @media print */}
+        <div id="thermal-receipt" className="hidden print:block font-mono text-[11px] leading-tight text-black">
+          <div className="text-center pb-2 border-b border-dashed border-black">
+            <div className="font-bold text-sm tracking-wider">AARON PROVISIONES</div>
+            <div>Minimarket & Abarrotes</div>
+            <div>RUT: 77.123.456-7</div>
+            <div>Casa Matriz - Provisiones</div>
+            <div className="text-[10px] mt-1">--------------------------------</div>
+            <div className="font-bold">BOLETA ELECTRÓNICA N° {receipt.invoice_number}</div>
+            <div className="text-[10px]">{new Date().toLocaleString('es-CL')}</div>
+          </div>
+
+          <div className="py-2 border-b border-dashed border-black">
+            <div className="flex justify-between font-bold pb-1 text-[10px]">
+              <span>CANT PRODUCTO</span>
+              <span>TOTAL</span>
+            </div>
+            {receipt.items.map((item) => (
+              <div key={item.product_id} className="flex justify-between py-0.5">
+                <span className="truncate max-w-[170px]">
+                  {item.quantity}× {item.product_name}
+                </span>
+                <span className="shrink-0">{money(item.subtotal - item.discount_amount)}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="py-2 space-y-1 border-b border-dashed border-black text-[11px]">
+            <div className="flex justify-between">
+              <span>Subtotal Neto:</span>
+              <span>{money(receipt.subtotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>IVA (19%):</span>
+              <span>{money(receipt.iva)}</span>
+            </div>
+            <div className="flex justify-between font-bold text-xs pt-1 border-t border-dotted border-black">
+              <span>TOTAL A PAGAR:</span>
+              <span>{money(receipt.total_amount)}</span>
+            </div>
+          </div>
+
+          <div className="py-2 border-b border-dashed border-black space-y-0.5 text-[10px]">
+            <div className="flex justify-between">
+              <span>Medio de Pago:</span>
+              <span>{paymentLabels[receipt.payment_method] || receipt.payment_method}</span>
+            </div>
+            {receipt.amount_received != null && (
+              <>
+                <div className="flex justify-between">
+                  <span>Efectivo Recibido:</span>
+                  <span>{money(receipt.amount_received)}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span>Vuelto:</span>
+                  <span>{money(receipt.change_amount ?? 0)}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="pt-3 text-center text-[10px] space-y-0.5">
+            <div>¡Gracias por su preferencia!</div>
+            <div>Conserve este comprobante</div>
+          </div>
+        </div>
+
+        {/* Tarjeta Visual en Pantalla */}
         <div className="rounded-3xl border border-border/80 bg-card p-6 md:p-8 shadow-xl">
           <div className="text-center">
             <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -236,17 +355,29 @@ export function POSPage() {
             )}
           </div>
 
-          <Button
-            size="lg"
-            className="mt-6 w-full text-base font-bold"
-            onClick={() => {
-              setReceipt(null);
-              setTimeout(() => inputRef.current?.focus(), 100);
-            }}
-          >
-            <Plus className="size-5" />
-            Nueva Venta
-          </Button>
+          {/* Botones de acción */}
+          <div className="mt-6 flex flex-col gap-2.5">
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full text-base font-bold shadow-xs hover:bg-secondary"
+              onClick={() => window.print()}
+            >
+              <Printer className="size-5 mr-2 text-emerald-600 dark:text-emerald-400" />
+              Imprimir Ticket (58mm / 80mm)
+            </Button>
+            <Button
+              size="lg"
+              className="w-full text-base font-bold"
+              onClick={() => {
+                setReceipt(null);
+                setTimeout(() => inputRef.current?.focus(), 100);
+              }}
+            >
+              <Plus className="size-5 mr-1" />
+              Nueva Venta
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -502,16 +633,63 @@ export function POSPage() {
               </div>
             </div>
 
+            {/* Asignación de Cliente / Libreta de Fiados */}
+            <div className="rounded-xl border border-border/70 bg-secondary/20 p-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold uppercase tracking-wider text-muted-foreground">Cliente / Cuenta</span>
+                <button
+                  type="button"
+                  onClick={() => setCustomerPickerOpen(true)}
+                  className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+                >
+                  {selectedCustomer ? 'Cambiar' : 'Asignar Vecino'}
+                </button>
+              </div>
+              <div className="mt-1.5 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-card border border-border/80 font-bold text-xs">
+                    {selectedCustomer ? selectedCustomer.name.charAt(0).toUpperCase() : 'O'}
+                  </div>
+                  <div className="min-w-0 text-xs">
+                    <div className="font-bold text-foreground truncate max-w-[170px]">
+                      {selectedCustomer ? selectedCustomer.name : 'Cliente Ocasional'}
+                    </div>
+                    {selectedCustomer && (
+                      <div className="text-[11px] text-muted-foreground">
+                        Cupo disponible:{' '}
+                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          {money(Math.max(0, selectedCustomer.credit_limit - selectedCustomer.current_balance))}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {selectedCustomer && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCustomer(null);
+                      if (paymentMethod === 'credit') setPaymentMethod('cash');
+                    }}
+                    className="text-[11px] text-muted-foreground hover:text-destructive"
+                  >
+                    Quitar
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Selector visual de medio de pago */}
             <div className="space-y-2">
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Medio de Pago
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {[
                   { id: 'cash', label: 'Efectivo', icon: Banknote },
                   { id: 'card', label: 'Tarjeta', icon: CreditCard },
                   { id: 'transfer', label: 'Transfer.', icon: ArrowRightLeft },
+                  { id: 'credit', label: 'Fiado / Cta.', icon: BookOpen },
                   { id: 'mixed', label: 'Mixto', icon: Coins },
                 ].map((item) => {
                   const Icon = item.icon;
@@ -520,8 +698,13 @@ export function POSPage() {
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => setPaymentMethod(item.id as PaymentMethod)}
-                      className={`flex items-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition-all active:scale-95 ${
+                      onClick={() => {
+                        setPaymentMethod(item.id as PaymentMethod);
+                        if (item.id === 'credit' && !selectedCustomer) {
+                          setCustomerPickerOpen(true);
+                        }
+                      }}
+                      className={`flex items-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition-all active:scale-95 ${
                         isSelected
                           ? 'border-emerald-600 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 shadow-xs'
                           : 'border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground'
@@ -534,6 +717,46 @@ export function POSPage() {
                 })}
               </div>
             </div>
+
+            {/* Alerta si es Fiado */}
+            {paymentMethod === 'credit' && (
+              <div className="space-y-2 rounded-xl border border-border/80 bg-secondary/30 p-3 text-xs animate-in fade-in">
+                <div className="flex justify-between items-center font-semibold text-foreground">
+                  <span>Anotar a la cuenta de:</span>
+                  <strong className="text-primary">{selectedCustomer ? selectedCustomer.name : 'Sin cliente'}</strong>
+                </div>
+                {selectedCustomer ? (
+                  <div className="space-y-1 text-muted-foreground pt-1 border-t border-border/60">
+                    <div className="flex justify-between">
+                      <span>Deuda acumulada previa:</span>
+                      <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                        {money(selectedCustomer.current_balance)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Nuevo saldo con esta compra:</span>
+                      <span className="font-mono font-bold text-foreground">
+                        {money(selectedCustomer.current_balance + totals.totalAmount)}
+                      </span>
+                    </div>
+                    {totals.totalAmount > selectedCustomer.credit_limit - selectedCustomer.current_balance && (
+                      <p className="mt-1 font-bold text-amber-600 dark:text-amber-400">
+                        ⚠️ Supera el cupo sugerido de {money(selectedCustomer.credit_limit)}.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full mt-1"
+                    onClick={() => setCustomerPickerOpen(true)}
+                  >
+                    <Users className="size-3.5 mr-1" /> Seleccionar Cliente
+                  </Button>
+                )}
+              </div>
+            )}
 
             {/* Efectivo y Billetes Rápidos */}
             {paymentMethod === 'cash' && (
@@ -617,6 +840,104 @@ export function POSPage() {
           setPromptProduct(null);
         }}
       />
+
+      <CustomerPickerModal
+        open={customerPickerOpen}
+        onOpenChange={setCustomerPickerOpen}
+        onSelect={(c) => {
+          setSelectedCustomer(c);
+          setPaymentMethod('credit');
+        }}
+      />
     </div>
   );
 }
+
+function CustomerPickerModal({
+  open,
+  onOpenChange,
+  onSelect,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (customer: Customer) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    listCustomers({ search: query.trim() || undefined })
+      .then((res) => {
+        if (res.success && res.data) setCustomers(res.data.customers);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [open, query]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        title="Seleccionar Cliente / Libreta de Fiados"
+        description="Elige al vecino para asociar la venta a su cuenta corriente."
+      >
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nombre, RUT o teléfono…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-9 h-10"
+              autoFocus
+            />
+          </div>
+
+          <div className="max-h-64 overflow-y-auto divide-y divide-border/60 rounded-xl border border-border/80 bg-card">
+            {loading ? (
+              <div className="py-8 text-center text-xs text-muted-foreground">Buscando clientes…</div>
+            ) : customers.length === 0 ? (
+              <div className="py-8 text-center text-xs text-muted-foreground">
+                No se encontraron clientes registrados.
+              </div>
+            ) : (
+              customers.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    onSelect(c);
+                    onOpenChange(false);
+                  }}
+                  className="flex w-full items-center justify-between p-3 text-left hover:bg-secondary/40 transition-colors"
+                >
+                  <div>
+                    <div className="font-semibold text-xs text-foreground">{c.name}</div>
+                    <div className="text-[11px] text-muted-foreground">{c.phone || c.rut || 'Sin teléfono'}</div>
+                  </div>
+                  <div className="text-right text-xs">
+                    <div className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                      Debe: {money(c.current_balance)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      Cupo disponible: {money(Math.max(0, c.credit_limit - c.current_balance))}
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+
+          <div className="flex justify-end pt-2 border-t border-border/60">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cerrar
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+

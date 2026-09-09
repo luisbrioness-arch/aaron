@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, Pencil, PackagePlus, Ban } from 'lucide-react';
+import { Plus, Search, Pencil, PackagePlus, Ban, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { ProductFormModal } from '@/components/ProductFormModal';
 import { StockAdjustModal } from '@/components/StockAdjustModal';
+import { ShelfLabelModal } from '@/components/ShelfLabelModal';
 import { useAuthStore } from '@/store/authStore';
 import { deactivateProduct, listCategories, listProducts } from '@/lib/products';
 import type { Category, Product } from '@/types';
@@ -31,6 +32,7 @@ export function BodegaPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
+  const [labelModalOpen, setLabelModalOpen] = useState(false);
 
   useEffect(() => {
     listCategories()
@@ -109,12 +111,25 @@ export function BodegaPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Bodega & Inventario</h1>
           <p className="text-sm text-muted-foreground font-medium">Catálogo completo de productos, precios y existencias</p>
         </div>
-        {canManage && (
-          <Button onClick={openCreate} className="shadow-sm shadow-emerald-500/20">
-            <Plus className="size-4 mr-1" />
-            Nuevo Producto
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {products.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setLabelModalOpen(true)}
+              className="shadow-2xs"
+              title="Generar e imprimir etiquetas de precio para góndola"
+            >
+              <Tag className="size-4 mr-1.5 text-emerald-600 dark:text-emerald-400" />
+              Etiquetas Góndola
+            </Button>
+          )}
+          {canManage && (
+            <Button onClick={openCreate} className="shadow-sm shadow-emerald-500/20">
+              <Plus className="size-4 mr-1" />
+              Nuevo Producto
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="mb-5 flex flex-wrap gap-3">
@@ -285,6 +300,12 @@ export function BodegaPage() {
           />
         </>
       )}
+
+      <ShelfLabelModal
+        open={labelModalOpen}
+        onOpenChange={setLabelModalOpen}
+        products={products}
+      />
     </div>
   );
 }

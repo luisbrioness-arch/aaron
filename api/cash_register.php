@@ -26,6 +26,12 @@ switch ($action) {
     case 'current':
         handleCurrent($pdo, $auth);
         break;
+    case 'expense':
+        handleExpense($pdo, $auth);
+        break;
+    case 'expenses':
+        handleListExpenses($pdo, $auth);
+        break;
     default:
         jsonResponse(false, null, 'Acción no válida', 400);
 }
@@ -44,6 +50,15 @@ function cashSalesTotal($pdo, $registerId) {
     $stmt = $pdo->prepare(
         "SELECT COALESCE(SUM(total_amount), 0) FROM sales
          WHERE cash_register_id = :id AND payment_method = 'cash' AND status = 'completed'"
+    );
+    $stmt->execute([':id' => $registerId]);
+    return (float) $stmt->fetchColumn();
+}
+
+function cashExpensesTotal($pdo, $registerId) {
+    $stmt = $pdo->prepare(
+        "SELECT COALESCE(SUM(amount), 0) FROM expenses
+         WHERE cash_register_id = :id"
     );
     $stmt->execute([':id' => $registerId]);
     return (float) $stmt->fetchColumn();
@@ -101,7 +116,8 @@ function handleClose($pdo, $auth) {
     }
 
     $cashSales = cashSalesTotal($pdo, $register['id']);
-    $expectedAmount = (float) $register['opening_amount'] + $cashSales;
+    $cashExpenses = cashExpensesTotal($pdo, $register['id']);
+    $expectedAmount = (float) $register['opening_amount'] + $cashSales - $cashExpenses;
     $difference = $closingAmount - $expectedAmount;
 
     $stmt = $pdo->prepare(
@@ -121,6 +137,7 @@ function handleClose($pdo, $auth) {
         'cash_register_id' => $register['id'],
         'opening_amount' => (float) $register['opening_amount'],
         'cash_sales' => $cashSales,
+        'cash_expenses' => $cashExpenses,
         'expected_amount' => $expectedAmount,
         'closing_amount' => (float) $closingAmount,
         'difference' => $difference,
@@ -135,13 +152,75 @@ function handleCurrent($pdo, $auth) {
     }
 
     $cashSales = cashSalesTotal($pdo, $register['id']);
+    $cashExpenses = cashExpensesTotal($pdo, $register['id']);
+    $currentAmount = (float) $register['opening_amount'] + $cashSales - $cashExpenses;
 
     jsonResponse(true, [
         'cash_register_id' => $register['id'],
         'opening_amount' => (float) $register['opening_amount'],
         'cash_sales' => $cashSales,
-        'current_amount' => (float) $register['opening_amount'] + $cashSales,
+        'cash_expenses' => $cashExpenses,
+        'current_amount' => $currentAmount,
         'opened_at' => $register['opened_at'],
         'status' => 'open',
     ], 'Caja actual');
+}
+
+function handleExpense($pdo, $auth) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        jsonResponse(false, null, 'Método no permitido', 405);
+    }
+    $register = findOpenRegister($pdo, $auth['user_id']);
+    if (!$register) {
+        jsonResponse(false, null, 'No tienes una caja abierta para registrar gastos', 400);
+    }
+    $input = getJSONInput();
+    $amount = $input['amount'] ?? null;
+    $category = trim($input['category'] ?? 'Varios');
+    $description = trim($input['description'] ?? '');
+
+    if (!is_numeric($amount) || $amount <= 0) {
+        jsonResponse(false, null, 'El monto debe ser un número positivo', 400);
+    }
+    if (empty($description)) {
+        jsonResponse(false, null, 'Debes ingresar el motivo o descripción del gasto', 400);
+    }
+
+    $id = generateUuid();
+    $stmt = $pdo->prepare(
+        "INSERT INTO expenses (id, cash_register_id, amount, category, description, user_id)
+         VALUES (:id, :cash_register_id, :amount, :category, :description, :user_id)"
+    );
+    $stmt->execute([
+        ':id' => $id,
+        ':cash_register_id' => $register['id'],
+        ':amount' => $amount,
+        ':category' => $category,
+        ':description' => $description,
+        ':user_id' => $auth['user_id'],
+    ]);
+
+    jsonResponse(true, [
+        'id' => $id,
+        'amount' => (float) $amount,
+        'category' => $category,
+        'description' => $description,
+    ], 'Gasto registrado correctamente');
+}
+
+function handleListExpenses($pdo, $auth) {
+    $register = findOpenRegister($pdo, $auth['user_id']);
+    if (!$register) {
+        jsonResponse(true, [], 'Sin caja abierta');
+    }
+    $stmt = $pdo->prepare(
+        "SELECT e.*, u.full_name, u.username
+         FROM expenses e
+         LEFT JOIN users u ON u.id = e.user_id
+         WHERE e.cash_register_id = :reg_id
+         ORDER BY e.created_at DESC"
+    );
+    $stmt->execute([':reg_id' => $register['id']]);
+    $list = $stmt->fetchAll();
+    jsonResponse(true, $list, 'Gastos de la caja');
 }

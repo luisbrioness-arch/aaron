@@ -14,7 +14,7 @@ require_once __DIR__ . '/middleware.php';
 
 setCORSHeaders();
 
-const VALID_PAYMENT_METHODS = ['cash', 'card', 'transfer', 'mixed'];
+const VALID_PAYMENT_METHODS = ['cash', 'card', 'transfer', 'mixed', 'credit'];
 const VALID_INVOICE_TYPES = ['boleta', 'factura'];
 const IVA_RATE = 0.19;
 
@@ -193,6 +193,21 @@ function handleCreate($pdo, $auth) {
         jsonResponse(false, null, 'amount_received solo es válido con payment_method "cash"', 400);
     }
 
+    $customerId = $input['customer_id'] ?? null;
+    $customerName = $input['customer_name'] ?? null;
+    if ($paymentMethod === 'credit') {
+        if (empty($customerId)) {
+            jsonResponse(false, null, 'Debes seleccionar un cliente para registrar una venta al fiado', 400);
+        }
+        $custStmt = $pdo->prepare('SELECT id, name, credit_limit, current_balance FROM customers WHERE id = :id AND is_active = 1');
+        $custStmt->execute([':id' => $customerId]);
+        $customer = $custStmt->fetch();
+        if (!$customer) {
+            jsonResponse(false, null, 'Cliente no existe o no está activo', 404);
+        }
+        $customerName = $customer['name'];
+    }
+
     $pdo->beginTransaction();
 
     try {
@@ -284,11 +299,11 @@ function handleCreate($pdo, $auth) {
 
         $stmt = $pdo->prepare(
             'INSERT INTO sales
-             (id, cash_register_id, user_id, total_amount, discount_amount, payment_method,
+             (id, cash_register_id, user_id, customer_id, total_amount, discount_amount, payment_method,
               amount_received, change_amount, invoice_type, invoice_number, invoice_date,
               customer_rut, customer_name, status)
              VALUES
-             (:id, :cash_register_id, :user_id, :total_amount, :discount_amount, :payment_method,
+             (:id, :cash_register_id, :user_id, :customer_id, :total_amount, :discount_amount, :payment_method,
               :amount_received, :change_amount, :invoice_type, :invoice_number, CURDATE(),
               :customer_rut, :customer_name, "completed")'
         );
@@ -296,6 +311,7 @@ function handleCreate($pdo, $auth) {
             ':id' => $saleId,
             ':cash_register_id' => $cashRegisterId,
             ':user_id' => $auth['user_id'],
+            ':customer_id' => $customerId,
             ':total_amount' => $totalAmount,
             ':discount_amount' => $saleDiscount,
             ':payment_method' => $paymentMethod,
@@ -304,8 +320,13 @@ function handleCreate($pdo, $auth) {
             ':invoice_type' => $invoiceType,
             ':invoice_number' => $invoiceNumber,
             ':customer_rut' => $input['customer_rut'] ?? null,
-            ':customer_name' => $input['customer_name'] ?? null,
+            ':customer_name' => $customerName,
         ]);
+
+        if ($paymentMethod === 'credit' && $customerId) {
+            $updCust = $pdo->prepare('UPDATE customers SET current_balance = current_balance + :amt WHERE id = :id');
+            $updCust->execute([':amt' => $totalAmount, ':id' => $customerId]);
+        }
 
         $detailStmt = $pdo->prepare(
             'INSERT INTO sales_details
@@ -345,6 +366,7 @@ function handleCreate($pdo, $auth) {
         'iva' => $iva,
         'rounding_adjustment' => $roundingAdjustment,
         'total_amount' => $totalAmount,
+        'payment_method' => $paymentMethod,
         'amount_received' => $amountReceived,
         'change_amount' => $changeAmount,
         'items' => array_map(fn ($l) => [

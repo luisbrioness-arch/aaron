@@ -8,3 +8,5 @@ export { ReportsPage } from './ReportsPage';
 export { PromotionsPage } from './PromotionsPage';
 export { SuppliersPage } from './SuppliersPage';
 export { UsersPage } from './UsersPage';
+export { CustomersPage } from './CustomersPage';
+

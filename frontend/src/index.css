@@ -102,3 +102,48 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+@media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #thermal-receipt,
+  #thermal-receipt *,
+  #shelf-labels-print,
+  #shelf-labels-print * {
+    visibility: visible;
+  }
+  #shelf-labels-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  #thermal-receipt {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 72mm;
+    max-width: 100%;
+    margin: 0;
+    padding: 2mm 3mm;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11px;
+    line-height: 1.25;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

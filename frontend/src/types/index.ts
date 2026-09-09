@@ -83,13 +83,66 @@ export interface InventoryMovement {
   product_sku: string;
 }
 
-export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'mixed';
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'mixed' | 'credit';
 export type InvoiceType = 'boleta' | 'factura';
+
+export interface Customer {
+  id: string;
+  name: string;
+  rut: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  credit_limit: number;
+  current_balance: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string;
+  recent_sales?: Array<{
+    id: string;
+    invoice_number: string;
+    total_amount: number;
+    created_at: string;
+    type: string;
+  }>;
+  recent_payments?: Array<{
+    id: string;
+    amount: number;
+    payment_method: string;
+    notes: string | null;
+    created_at: string;
+    full_name?: string;
+    username?: string;
+    type: string;
+  }>;
+}
+
+export interface CustomerPaymentResult {
+  payment_id: string;
+  customer_id: string;
+  amount: number;
+  previous_balance: number;
+  new_balance: number;
+}
+
+
+export interface CashExpense {
+  id: string;
+  cash_register_id: string;
+  amount: number;
+  category: string;
+  description: string;
+  user_id: string;
+  full_name?: string;
+  username?: string;
+  created_at: string;
+}
 
 export interface CashRegisterState {
   cash_register_id: string;
   opening_amount: number;
   cash_sales: number;
+  cash_expenses?: number;
   current_amount: number;
   opened_at: string;
   status: 'open';
@@ -99,6 +152,7 @@ export interface CashRegisterCloseResult {
   cash_register_id: string;
   opening_amount: number;
   cash_sales: number;
+  cash_expenses?: number;
   expected_amount: number;
   closing_amount: number;
   difference: number;
@@ -130,6 +184,7 @@ export interface SaleResult {
   iva: number;
   rounding_adjustment: number;
   total_amount: number;
+  payment_method: PaymentMethod;
   amount_received: number | null;
   change_amount: number | null;
   items: SaleItemResult[];
