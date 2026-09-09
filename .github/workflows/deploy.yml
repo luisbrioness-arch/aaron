@@ -48,7 +48,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           local-dir: ./frontend/dist/
-          server-dir: ./aaron.hogartv.cl/public_html/
+          server-dir: ./
           state-name: .ftp-deploy-sync-state-frontend.json
 
       # config.php nunca está en este repo (gitignored) — este paso jamás
@@ -61,7 +61,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           local-dir: ./api/
-          server-dir: ./aaron.hogartv.cl/public_html/api/
+          server-dir: ./api/
           state-name: .ftp-deploy-sync-state-api.json
           exclude: |
             **/*.example.php
@@ -80,7 +80,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           local-dir: ./upgrade/
-          server-dir: ./aaron.hogartv.cl/public_html/upgrade/
+          server-dir: ./upgrade/
           state-name: .ftp-deploy-sync-state-upgrade.json
           exclude: |
             fixes/**

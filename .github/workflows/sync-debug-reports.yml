@@ -63,7 +63,7 @@ jobs:
               echo "set ftp:ssl-force true"
               echo "set ssl:verify-certificate no"
               for f in "${to_delete[@]}"; do
-                printf 'rm "aaron.hogartv.cl/public_html/upgrade/fixes/%s"\n' "$f"
+                printf 'rm "upgrade/fixes/%s"\n' "$f"
               done
               echo "bye"
             } | lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" "${{ secrets.FTP_SERVER }}" >> upgrade/fixes/.prune-log.txt 2>&1
@@ -78,7 +78,7 @@ jobs:
           lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" "${{ secrets.FTP_SERVER }}" <<'EOF'
           set ftp:ssl-force true
           set ssl:verify-certificate no
-          mirror --verbose --only-newer aaron.hogartv.cl/public_html/upgrade/fixes ./upgrade/fixes
+          mirror --verbose --only-newer upgrade/fixes ./upgrade/fixes
           bye
           EOF
 
