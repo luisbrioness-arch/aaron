@@ -17,6 +17,7 @@ import {
   Printer,
   BookOpen,
   Users,
+  MessageCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -27,6 +28,7 @@ import { QuantityPromptModal } from '@/components/QuantityPromptModal';
 import { searchProducts } from '@/lib/products';
 import { createSale } from '@/lib/sales';
 import { listCustomers } from '@/lib/customers';
+import { openWhatsAppCreditReceipt } from '@/lib/whatsapp';
 import type { Customer, PaymentMethod, Product, SaleResult } from '@/types';
 
 interface CartLine {
@@ -71,6 +73,8 @@ export function POSPage() {
   const [registerRefreshKey, setRegisterRefreshKey] = useState(0);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
+  const [receiptCustomer, setReceiptCustomer] = useState<Customer | null>(null);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   function parseScaleBarcode(code: string): { skuOrBarcode: string; weightKg: number } | null {
@@ -214,6 +218,8 @@ export function POSPage() {
         return;
       }
       setReceipt({ ...res.data, payment_method: res.data.payment_method || paymentMethod });
+      setReceiptCustomer(selectedCustomer);
+      setWhatsappPhone(selectedCustomer?.phone || '');
       setCart([]);
       setSaleDiscountInput('0');
       setAmountReceived('');
@@ -354,6 +360,61 @@ export function POSPage() {
               </div>
             )}
           </div>
+
+          {/* Envío de comprobante por WhatsApp (Especialmente para Fiados) */}
+          {(receipt.payment_method === 'credit' || receiptCustomer) && (
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/40 dark:bg-emerald-950/30 p-3.5 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                <div className="flex items-center gap-1.5">
+                  <MessageCircle className="size-4 text-[#25D366]" />
+                  <span>Comprobante de Fiado por WhatsApp</span>
+                </div>
+                {receiptCustomer && (
+                  <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 truncate max-w-[140px]">
+                    {receiptCustomer.name}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  type="tel"
+                  placeholder="Teléfono (ej: 912345678)"
+                  value={whatsappPhone}
+                  onChange={(e) => setWhatsappPhone(e.target.value)}
+                  className="h-9 bg-card text-xs font-mono"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs shrink-0 h-9 px-3 shadow-xs active:scale-95"
+                  onClick={() => {
+                    openWhatsAppCreditReceipt(
+                      {
+                        phone: whatsappPhone || receiptCustomer?.phone,
+                        customerName: receiptCustomer?.name || 'Vecino/a',
+                        invoiceNumber: receipt.invoice_number,
+                        date: new Date().toLocaleString('es-CL'),
+                        totalAmount: receipt.total_amount,
+                        items: receipt.items,
+                        currentBalance: receiptCustomer
+                          ? receiptCustomer.current_balance + receipt.total_amount
+                          : undefined,
+                        creditLimit: receiptCustomer?.credit_limit,
+                      },
+                      whatsappPhone,
+                    );
+                  }}
+                >
+                  <MessageCircle className="size-3.5 mr-1" />
+                  Enviar al WhatsApp
+                </Button>
+              </div>
+              <p className="text-[10px] text-emerald-800/80 dark:text-emerald-300/80">
+                Abre WhatsApp con el mensaje listo para enviar el detalle de los productos y el saldo adeudado.
+              </p>
+            </div>
+          )}
 
           {/* Botones de acción */}
           <div className="mt-6 flex flex-col gap-2.5">
