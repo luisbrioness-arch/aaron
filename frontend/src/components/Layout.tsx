@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
+import { LiveClock } from '@/components/LiveClock';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types';
 
@@ -86,6 +87,7 @@ export function Layout() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <LiveClock variant="compact" />
           <button
             onClick={toggleTheme}
             className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
@@ -146,6 +148,11 @@ export function Layout() {
             </div>
             <p className="text-xs text-muted-foreground font-medium">Provisiones & Abarrotes</p>
           </div>
+        </div>
+
+        {/* Reloj y Fecha en Vivo del Sistema */}
+        <div className="px-3 pt-3">
+          <LiveClock variant="sidebar" />
         </div>
 
         {/* Lista de Navegación */}
