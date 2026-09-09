@@ -21,7 +21,7 @@ Monorepo npm workspaces:
 | Carpeta | Stack | Qué es |
 |---|---|---|
 | `frontend/` | React 19 + Vite + Tailwind 4, salida estática | SPA de POS, Bodega e Informes |
-| `api/` | PHP 8 + PDO/MariaDB, sin framework | Backend real |
+| `api/` | PHP **8.1+** + PDO/MariaDB, sin framework | Backend real (probado en 8.1 y 8.5) |
 
 **No hay Node.js corriendo en el servidor.** `frontend/` compila a
 archivos estáticos; `api/` es PHP plano pensado para hosting compartido
@@ -96,6 +96,7 @@ D-13 en `DECISIONS.md`).
 | [`DECISIONS.md`](DECISIONS.md) | Por qué las cosas son así. Lee antes de "arreglar" algo raro |
 | [`API.md`](API.md) | Contrato real (o planeado) de la API: endpoints, parámetros, forma del JSON |
 | [`CHANGELOG.md`](CHANGELOG.md) | Qué cambió en el producto y cuándo |
+| [`DEPLOY.md`](DEPLOY.md) | Cómo se despliega (todavía pendiente — sin dominio/hosting confirmado) y el runbook de fallas |
 
 ---
 
@@ -120,14 +121,24 @@ frontend/src/
 api/
 ├── auth.php, products.php, sales.php, cash_register.php, inventory.php,
 │   lots.php, promotions.php, purchases.php, suppliers.php, users.php,
-│   reports.php        # los 11 endpoints están implementados de punta a
-│                       # punta (T-01 a T-09) — ninguno devuelve 501 ya
+│   reports.php        # los 11 endpoints de negocio están implementados
+│                       # de punta a punta (T-01 a T-09) — ninguno 501 ya
+├── debug_report.php    # público, sin JWT — recibe reportes del modo
+│                       # debug (?Debug=1), ver D-31
 ├── middleware.php      # JWT, CORS, requireAuth/requireRole, helpers
 ├── config.example.php  # plantilla — config.php real NUNCA va a git
 └── db/
     ├── schema.sql       # 15 tablas (+ is_active en suppliers, D-28)
     ├── seed.sql         # categorías de ejemplo
     └── seed_admin.sql   # usuario admin/demo123
+
+upgrade/
+├── .htaccess     # deniega acceso web directo a toda la carpeta
+└── fixes/        # .md generados por el modo debug — ver su README.md
+
+.github/workflows/
+├── deploy.yml               # ⚠️ sin activar — falta dominio/hosting (D-04)
+└── sync-debug-reports.yml   # ⚠️ sin activar — misma dependencia
 ```
 
 **Ninguno de estos 11 endpoints se probó contra una base de datos real
@@ -165,3 +176,29 @@ navegador (con datos mockeados) en cada tarea.
   hosting compartido.
 - **`sales.cash_register_id` es nullable a propósito** (D-07) — no asumas
   que toda venta tiene caja asociada.
+
+---
+
+## Modo debug — reportar bugs desde el sitio en vivo
+
+Copiado de FERRIMIX (ver D-31 en [`DECISIONS.md`](DECISIONS.md), que a su
+vez lo copió de Parque San Pedro). Cualquiera con el link puede reportar
+un problema de UI sin herramientas técnicas:
+
+```
+http://localhost:5173/?Debug=1&key=LA_CLAVE
+```
+
+(en producción sería `https://<dominio-real>/?Debug=1&key=LA_CLAVE` — la
+clave real vive en `DEBUG_REPORT_KEY` de `api/config.php` del servidor,
+nunca en el repo). Sin `&key=...` funciona igual si `DEBUG_REPORT_KEY`
+está vacía — pero en producción siempre debería tener un valor real.
+
+Aparece un botón "Reportar problema" abajo a la derecha. Click, selecciona
+el elemento con el problema, describe qué pasa, envía. Queda guardado como
+`.md` en `upgrade/fixes/` — se sincroniza a este repo automáticamente cada
+6 horas una vez que haya hosting real (ver
+[`upgrade/fixes/README.md`](upgrade/fixes/README.md) para el ciclo de
+vida completo). **Funciona ya en local** (`npm run dev` + `?Debug=1`)
+aunque el deploy/sync todavía no estén activos — solo requiere que
+`api/debug_report.php` responda, no depende de FTP ni de GitHub Actions.
