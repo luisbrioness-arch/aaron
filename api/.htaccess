@@ -1,5 +1,13 @@
 Options -Indexes
 
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Authorization} ^(.*)
+    RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+</IfModule>
+
+SetEnvIfNoCase ^Authorization$ "(.+)" HTTP_AUTHORIZATION=$1
+
 <FilesMatch "\.sql$">
     <IfModule mod_authz_core.c>
         Require all denied

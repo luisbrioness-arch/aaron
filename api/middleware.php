@@ -47,7 +47,15 @@ function getDB() {
 }
 
 function getJWT() {
-    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION']
+        ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+        ?? '';
+
+    if (!$authHeader && function_exists('apache_request_headers')) {
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+    }
+
     if (preg_match('/Bearer\s+(.+)/i', $authHeader, $matches)) {
         return $matches[1];
     }
