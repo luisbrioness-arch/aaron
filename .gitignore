@@ -10,3 +10,5 @@ api/config.php
 *.swp
 *.swo
 *~
+# Fotos del local — no van al repo (archivos grandes, no son código)
+FOTOS AARON/
