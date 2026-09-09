@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Navigate } from 'react-router';
-import { Store, User, Lock, Eye, EyeOff, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Store, User, Lock, Eye, EyeOff, Loader2, AlertCircle, ShieldCheck, Sun, Moon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import { useThemeStore } from '@/store/themeStore';
 import type { ApiResponse, AuthUser } from '@/types';
 
 interface LoginResponse {
@@ -14,6 +15,7 @@ interface LoginResponse {
 export function LoginPage() {
   const user = useAuthStore((s) => s.user);
   const setSession = useAuthStore((s) => s.setSession);
+  const { theme, toggle: toggleTheme } = useThemeStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -45,6 +47,28 @@ export function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-background px-4 py-12">
+      {/* Botón flotante para alternar tema */}
+      <div className="absolute top-4 right-4 z-10">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="flex items-center gap-2 rounded-xl border border-border/80 bg-card/80 px-3.5 py-2 text-xs font-medium text-foreground shadow-sm backdrop-blur-xs transition-all hover:bg-secondary active:scale-95"
+          title="Alternar modo claro / oscuro"
+        >
+          {theme === 'light' ? (
+            <>
+              <Moon className="size-4 text-slate-600 dark:text-slate-400" />
+              <span>Modo Oscuro</span>
+            </>
+          ) : (
+            <>
+              <Sun className="size-4 text-amber-400" />
+              <span>Modo Claro</span>
+            </>
+          )}
+        </button>
+      </div>
+
       {/* Fondo decorativo con gradiente sutil */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 size-96 rounded-full bg-emerald-500/10 blur-3xl" />
