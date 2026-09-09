@@ -26,37 +26,56 @@ export function CashRegisterBanner({ refreshKey }: { refreshKey: number }) {
   useEffect(refresh, [refreshKey]);
 
   if (loading) {
-    return <div className="mb-4 h-14 animate-pulse rounded-lg border border-border bg-card" />;
+    return <div className="mb-6 h-16 animate-pulse rounded-2xl border border-border/80 bg-card" />;
   }
 
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-2.5">
+    <div className="mb-6">
       {register ? (
-        <>
-          <div className="flex items-center gap-2 text-sm">
-            <Wallet className="size-4 text-accent" />
-            <span className="font-medium">Caja abierta</span>
-            <span className="text-muted-foreground">
-              · apertura {money(register.opening_amount)} · ventas efectivo {money(register.cash_sales)} ·{' '}
-              <span className="font-mono font-semibold text-foreground">{money(register.current_amount)}</span> en
-              caja
-            </span>
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-200/70 bg-emerald-50/50 dark:border-emerald-900/40 dark:bg-emerald-950/20 p-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="relative flex size-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex size-3 rounded-full bg-emerald-500"></span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-emerald-950 dark:text-emerald-200">Caja Operativa</span>
+                <span className="rounded-md bg-emerald-200/70 dark:bg-emerald-900/60 px-2 py-0.5 text-[10px] font-extrabold uppercase text-emerald-800 dark:text-emerald-300">
+                  En Turno
+                </span>
+              </div>
+              <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted-foreground font-medium">
+                <span>Apertura: <strong className="font-mono text-foreground">{money(register.opening_amount)}</strong></span>
+                <span>•</span>
+                <span>Ventas efectivo: <strong className="font-mono text-foreground">{money(register.cash_sales)}</strong></span>
+                <span>•</span>
+                <span>En caja: <strong className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{money(register.current_amount)}</strong></span>
+              </div>
+            </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setCloseModal(true)}>
-            <Lock className="size-3.5" />
-            Cerrar caja
+          <Button variant="outline" size="sm" onClick={() => setCloseModal(true)} className="border-emerald-300/60 dark:border-emerald-800/60 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/40">
+            <Lock className="size-3.5 mr-1" />
+            Cuadrar y Cerrar
           </Button>
-        </>
+        </div>
       ) : (
-        <>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Wallet className="size-4" />
-            Sin caja abierta — igual puedes vender, pero no vas a poder cuadrar el efectivo al final del turno.
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-200/80 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20 p-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300">
+              <Wallet className="size-4" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-amber-950 dark:text-amber-200">Sin caja abierta</div>
+              <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
+                Puedes registrar ventas normalmente, pero abre caja para controlar el efectivo al finalizar el turno.
+              </p>
+            </div>
           </div>
-          <Button size="sm" onClick={() => setOpenModal(true)}>
-            Abrir caja
+          <Button size="sm" onClick={() => setOpenModal(true)} className="bg-amber-600 hover:bg-amber-700 text-white shadow-xs">
+            Abrir Caja Ahora
           </Button>
-        </>
+        </div>
       )}
 
       <OpenRegisterModal open={openModal} onOpenChange={setOpenModal} onOpened={refresh} />

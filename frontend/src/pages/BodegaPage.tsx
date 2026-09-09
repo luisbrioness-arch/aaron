@@ -104,30 +104,30 @@ export function BodegaPage() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold">Bodega</h1>
-          <p className="text-sm text-muted-foreground">Catálogo de productos y stock</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Bodega & Inventario</h1>
+          <p className="text-sm text-muted-foreground font-medium">Catálogo completo de productos, precios y existencias</p>
         </div>
         {canManage && (
-          <Button onClick={openCreate}>
-            <Plus className="size-4" />
-            Agregar producto
+          <Button onClick={openCreate} className="shadow-sm shadow-emerald-500/20">
+            <Plus className="size-4 mr-1" />
+            Nuevo Producto
           </Button>
         )}
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-3">
-        <div className="relative min-w-[240px] flex-1">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="mb-5 flex flex-wrap gap-3">
+        <div className="relative min-w-[280px] flex-1">
+          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70" />
           <Input
             value={q}
             onChange={(e) => {
               setPage(1);
               setQ(e.target.value);
             }}
-            placeholder="Buscar por nombre, SKU o código de barras…"
-            className="pl-8"
+            placeholder="Buscar por nombre, código de barras o SKU…"
+            className="pl-10 h-11 rounded-xl"
           />
         </div>
         <Select
@@ -136,7 +136,7 @@ export function BodegaPage() {
             setPage(1);
             setCategoryId(e.target.value);
           }}
-          className="w-56"
+          className="w-64 h-11 rounded-xl"
         >
           <option value="">Todas las categorías</option>
           {categories.map((c) => (
@@ -147,82 +147,97 @@ export function BodegaPage() {
         </Select>
       </div>
 
-      {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
+      {error && <p className="mb-4 text-sm text-destructive font-medium">{error}</p>}
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-card">
+      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-4 py-2.5 font-medium">Producto</th>
-              <th className="px-4 py-2.5 font-medium">Categoría</th>
-              <th className="px-4 py-2.5 font-medium">Precio</th>
-              <th className="px-4 py-2.5 font-medium">Stock</th>
-              {canManage && <th className="px-4 py-2.5 font-medium">Acciones</th>}
+            <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground bg-secondary/40 font-semibold">
+              <th className="px-5 py-3.5">Producto</th>
+              <th className="px-4 py-3.5">Categoría</th>
+              <th className="px-4 py-3.5">Precio Venta</th>
+              <th className="px-4 py-3.5">Stock Disponible</th>
+              {canManage && <th className="px-4 py-3.5 text-right">Acciones</th>}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border/60">
             {loading && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                  Cargando…
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                  Cargando catálogo…
                 </td>
               </tr>
             )}
             {!loading && !hasResults && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                  No hay productos que coincidan con la búsqueda.
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                  No se encontraron productos que coincidan con la búsqueda.
                 </td>
               </tr>
             )}
             {!loading &&
               products.map((p) => (
-                <tr key={p.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-2.5">
-                    <div className="font-medium">{p.name}</div>
+                <tr key={p.id} className="hover:bg-secondary/40 transition-colors">
+                  <td className="px-5 py-3.5">
+                    <div className="font-semibold text-foreground">{p.name}</div>
                     <div className="font-mono text-xs text-muted-foreground">
-                      {p.sku}
-                      {p.barcode ? ` · ${p.barcode}` : ''}
+                      SKU: {p.sku}
+                      {p.barcode ? ` · Barras: ${p.barcode}` : ''}
                     </div>
-                    <div className="mt-1 flex gap-1">
-                      {p.is_scale_item && <Badge variant="neutral">Granel</Badge>}
-                      {p.has_expiration && <Badge variant="neutral">Vencimiento</Badge>}
+                    <div className="mt-1 flex gap-1.5">
+                      {p.is_scale_item && <Badge variant="neutral">Balanza / Granel</Badge>}
+                      {p.has_expiration && <Badge variant="warning">Control Vencimiento</Badge>}
                     </div>
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{p.category?.name ?? '—'}</td>
-                  <td className="px-4 py-2.5 font-mono">
+                  <td className="px-4 py-3.5 font-medium text-muted-foreground">{p.category?.name ?? '—'}</td>
+                  <td className="px-4 py-3.5 font-mono font-bold text-foreground text-base">
                     ${p.selling_price.toLocaleString('es-CL')}
                     {p.unit_of_measure !== 'units' && (
-                      <span className="text-muted-foreground">/{UNIT_LABELS[p.unit_of_measure]}</span>
+                      <span className="text-xs font-normal text-muted-foreground">/{UNIT_LABELS[p.unit_of_measure]}</span>
                     )}
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3.5">
                     <div className="flex items-center gap-2 font-mono">
-                      {p.stock_current} {UNIT_LABELS[p.unit_of_measure]}
+                      <span className={`text-base font-bold ${p.is_low_stock ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
+                        {p.stock_current.toLocaleString('es-CL')}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {UNIT_LABELS[p.unit_of_measure]}
+                      </span>
                       {p.is_low_stock && <Badge variant="warning">Stock bajo</Badge>}
                     </div>
                   </td>
                   {canManage && (
-                    <td className="px-4 py-2.5">
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" title="Editar" onClick={() => openEdit(p)}>
-                          <Pencil className="size-4" />
-                        </Button>
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
-                          size="icon"
-                          title="Ajustar stock"
+                          size="sm"
                           onClick={() => setAdjustingProduct(p)}
+                          title="Ajustar stock"
+                          className="h-8 px-2 text-xs"
                         >
-                          <PackagePlus className="size-4" />
+                          <PackagePlus className="size-3.5 mr-1" />
+                          Stock
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEdit(p)}
+                          title="Editar producto"
+                          className="h-8 px-2 text-xs"
+                        >
+                          <Pencil className="size-3.5 mr-1" />
+                          Editar
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          title="Desactivar"
                           onClick={() => handleDeactivate(p)}
+                          title="Desactivar producto"
+                          className="size-8 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                         >
-                          <Ban className="size-4" />
+                          <Ban className="size-3.5" />
                         </Button>
                       </div>
                     </td>
@@ -232,6 +247,7 @@ export function BodegaPage() {
           </tbody>
         </table>
       </div>
+
 
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-center gap-3 text-sm">

@@ -5,70 +5,88 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Paleta "Aaron Provisiones" — ver el documento de arquitectura para el
-     razonamiento completo. Dorado trigo (marca) + verde aceituna (acento/
-     frescura) + ámbar (alerta) + rojo teja (crítico), sobre papel cálido. */
-  --color-wheat: #b87a22;
-  --color-wheat-deep: #8f5e19;
-  --color-wheat-soft: #f1dfb8;
-  --color-olive: #4c7a3d;
-  --color-olive-deep: #375a2c;
-  --color-olive-soft: #dce8d2;
-  --color-amber: #c6720b;
-  --color-amber-soft: #f3dfbe;
-  --color-brick: #a23b2e;
-  --color-brick-soft: #f0d6ce;
+  /* Paleta moderna y limpia: Fondo neutro nítido + Verde esmeralda POS (energía y cobranza) + Slate elegante */
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
 
-  --color-background: #f6f1e3;
-  --color-foreground: #2b2318;
-  --color-card: #fffdf7;
-  --color-card-foreground: #2b2318;
-  --color-primary: #b87a22;
-  --color-primary-foreground: #fffdf7;
-  --color-secondary: #eee6ce;
-  --color-secondary-foreground: #2b2318;
-  --color-muted: #eee6ce;
-  --color-muted-foreground: #5c5138;
-  --color-accent: #4c7a3d;
-  --color-accent-foreground: #fffdf7;
-  --color-warning: #c6720b;
-  --color-warning-foreground: #fffdf7;
-  --color-destructive: #a23b2e;
-  --color-destructive-foreground: #fffdf7;
-  --color-border: #ded0a6;
-  --color-input: #ded0a6;
-  --color-ring: #4c7a3d;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
 
-  --font-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-primary: #059669;
+  --color-primary-hover: #047857;
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: #f1f5f9;
+  --color-secondary-foreground: #1e293b;
+
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+
+  --color-accent: #0284c7;
+  --color-accent-foreground: #ffffff;
+
+  --color-warning: #d97706;
+  --color-warning-soft: #fef3c7;
+  --color-warning-foreground: #ffffff;
+
+  --color-destructive: #dc2626;
+  --color-destructive-soft: #fee2e2;
+  --color-destructive-foreground: #ffffff;
+
+  --color-success: #16a34a;
+  --color-success-soft: #dcfce7;
+  --color-success-foreground: #ffffff;
+
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-ring: #10b981;
+
+  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
 }
 
 .dark {
-  --color-background: #1c1710;
-  --color-foreground: #f1e9d8;
-  --color-card: #262019;
-  --color-card-foreground: #f1e9d8;
-  --color-primary: #e3a94f;
-  --color-primary-foreground: #1c1710;
-  --color-secondary: #2f2820;
-  --color-secondary-foreground: #f1e9d8;
-  --color-muted: #2f2820;
-  --color-muted-foreground: #c7bb9f;
-  --color-accent: #7cb268;
-  --color-accent-foreground: #1c1710;
-  --color-warning: #e6963f;
-  --color-warning-foreground: #1c1710;
-  --color-destructive: #e17e6b;
-  --color-destructive-foreground: #1c1710;
-  --color-border: #423824;
-  --color-input: #423824;
-  --color-ring: #7cb268;
+  --color-background: #09090b;
+  --color-foreground: #f8fafc;
+
+  --color-card: #121215;
+  --color-card-foreground: #f8fafc;
+
+  --color-primary: #10b981;
+  --color-primary-hover: #34d399;
+  --color-primary-foreground: #09090b;
+
+  --color-secondary: #1e1e24;
+  --color-secondary-foreground: #f1f5f9;
+
+  --color-muted: #1e1e24;
+  --color-muted-foreground: #94a3b8;
+
+  --color-accent: #38bdf8;
+  --color-accent-foreground: #09090b;
+
+  --color-warning: #f59e0b;
+  --color-warning-soft: #451a03;
+  --color-warning-foreground: #09090b;
+
+  --color-destructive: #ef4444;
+  --color-destructive-soft: #450a0a;
+  --color-destructive-foreground: #ffffff;
+
+  --color-success: #22c55e;
+  --color-success-soft: #052e16;
+  --color-success-foreground: #09090b;
+
+  --color-border: #27272a;
+  --color-input: #27272a;
+  --color-ring: #34d399;
 }
 
 @layer base {
@@ -77,6 +95,10 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased selection:bg-emerald-500/20 selection:text-emerald-700 dark:selection:text-emerald-300;
+  }
+
+  .font-tabular {
+    font-variant-numeric: tabular-nums;
   }
 }

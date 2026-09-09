@@ -84,30 +84,33 @@ export function ReportsPage() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold">Informes</h1>
-          <p className="text-sm text-muted-foreground">Margen, categorías, medios de pago y productos estancados.</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Informes & Finanzas</h1>
+          <p className="text-sm text-muted-foreground font-medium">Márgenes, rentabilidad por producto y arqueos de caja</p>
         </div>
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-2 rounded-2xl border border-border/80 bg-card p-2 shadow-xs">
           <div>
-            <label className="mb-1 block text-xs text-muted-foreground">Desde</label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8" />
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Desde</label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 text-xs font-mono rounded-lg" />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted-foreground">Hasta</label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8" />
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Hasta</label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8 text-xs font-mono rounded-lg" />
           </div>
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-1 border-b border-border">
+      {/* Tabs estilo píldora moderna */}
+      <div className="mb-6 inline-flex flex-wrap gap-1 rounded-2xl border border-border/80 bg-secondary/40 p-1.5 shadow-2xs">
         {TABS.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`border-b-2 px-3 py-2 text-sm font-medium ${
-              tab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all duration-150 active:scale-95 ${
+              tab === t
+                ? 'bg-card text-foreground shadow-xs border border-border/60'
+                : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
             }`}
           >
             {t}
@@ -115,20 +118,21 @@ export function ReportsPage() {
         ))}
       </div>
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <p className="text-sm text-muted-foreground">Cargando…</p>}
+      {error && <p className="mb-4 text-sm font-medium text-destructive">{error}</p>}
+      {loading && <p className="text-sm font-medium text-muted-foreground">Calculando informes…</p>}
 
       {!loading && tab === 'Margen' && margin && (
-        <div>
-          <div className="mb-4 grid grid-cols-3 gap-3">
-            <SummaryTile label="Ingresos" value={money(margin.summary.revenue)} />
-            <SummaryTile label="Costo" value={money(margin.summary.cost)} />
-            <SummaryTile label="Margen" value={`${money(margin.summary.margin)} (${margin.summary.margin_pct}%)`} />
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <SummaryTile label="Ingresos Totales" value={money(margin.summary.revenue)} />
+            <SummaryTile label="Costo de Mercadería" value={money(margin.summary.cost)} />
+            <SummaryTile label="Margen Bruto" value={`${money(margin.summary.margin)} (${margin.summary.margin_pct}%)`} highlight />
           </div>
-          <div className="mb-2 flex justify-end">
+          <div className="flex justify-end">
             <Button
               variant="outline"
               size="sm"
+              className="rounded-xl shadow-2xs"
               onClick={() =>
                 downloadCsv('margen.csv', [
                   ['Producto', 'SKU', 'Cantidad', 'Ingresos', 'Costo', 'Margen', 'Margen %'],
@@ -136,8 +140,8 @@ export function ReportsPage() {
                 ])
               }
             >
-              <Download className="size-3.5" />
-              Exportar a Excel
+              <Download className="size-3.5 mr-1" />
+              Exportar CSV / Excel
             </Button>
           </div>
           <Table
@@ -195,40 +199,48 @@ export function ReportsPage() {
   );
 }
 
-function SummaryTile({ label, value }: { label: string; value: string }) {
+function SummaryTile({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 font-display text-xl font-bold">{value}</div>
+    <div className={`rounded-2xl border p-4 shadow-xs transition-all ${
+      highlight
+        ? 'border-emerald-200/80 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/20'
+        : 'border-border/80 bg-card'
+    }`}>
+      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={`mt-1 font-mono text-2xl font-extrabold tracking-tight ${
+        highlight ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground'
+      }`}>
+        {value}
+      </div>
     </div>
   );
 }
 
 function Table({ headers, rows, empty }: { headers: string[]; rows: string[][]; empty: string }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-card">
+    <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-            {headers.map((h) => (
-              <th key={h} className="px-4 py-2 font-medium">
+          <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground bg-secondary/40 font-semibold">
+            {headers.map((h, idx) => (
+              <th key={h} className={idx === 0 ? 'px-5 py-3.5' : 'px-4 py-3.5 text-right'}>
                 {h}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-border/60">
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={headers.length} className="px-4 py-8 text-center text-muted-foreground">
+              <td colSpan={headers.length} className="px-4 py-12 text-center text-muted-foreground">
                 {empty}
               </td>
             </tr>
           ) : (
             rows.map((row, i) => (
-              <tr key={i} className="border-b border-border last:border-0">
+              <tr key={i} className="hover:bg-secondary/40 transition-colors">
                 {row.map((cell, j) => (
-                  <td key={j} className={j === 0 ? 'px-4 py-2 font-medium' : 'px-4 py-2 font-mono'}>
+                  <td key={j} className={j === 0 ? 'px-5 py-3 font-semibold text-foreground' : 'px-4 py-3 font-mono text-right'}>
                     {cell}
                   </td>
                 ))}

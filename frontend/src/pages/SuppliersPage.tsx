@@ -40,71 +40,80 @@ export function SuppliersPage() {
 
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold">Proveedores</h1>
-          <p className="text-sm text-muted-foreground">Alta, edición y baja de proveedores.</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Proveedores</h1>
+          <p className="text-sm text-muted-foreground font-medium">Empresas distribuidoras, contactos y condiciones comerciales</p>
         </div>
         <Button
           onClick={() => {
             setEditing(null);
             setFormOpen(true);
           }}
+          className="shadow-sm shadow-emerald-500/20"
         >
-          <Plus className="size-4" />
-          Nuevo proveedor
+          <Plus className="size-4 mr-1" />
+          Nuevo Proveedor
         </Button>
       </div>
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {error && <p className="mb-4 text-sm font-medium text-destructive">{error}</p>}
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-card">
+      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-4 py-2.5 font-medium">Nombre</th>
-              <th className="px-4 py-2.5 font-medium">RUT</th>
-              <th className="px-4 py-2.5 font-medium">Teléfono</th>
-              <th className="px-4 py-2.5 font-medium">Email</th>
-              <th className="px-4 py-2.5 font-medium">Acciones</th>
+            <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground bg-secondary/40 font-semibold">
+              <th className="px-5 py-3.5">Razón Social / Nombre</th>
+              <th className="px-4 py-3.5">RUT</th>
+              <th className="px-4 py-3.5">Teléfono de Contacto</th>
+              <th className="px-4 py-3.5">Correo Electrónico</th>
+              <th className="px-4 py-3.5 text-right">Acciones</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border/60">
             {loading && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                  Cargando…
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                  Cargando proveedores…
                 </td>
               </tr>
             )}
             {!loading && suppliers.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                  Sin proveedores todavía.
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                  No hay proveedores registrados aún.
                 </td>
               </tr>
             )}
             {!loading &&
               suppliers.map((s) => (
-                <tr key={s.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-2.5 font-medium">{s.name}</td>
-                  <td className="px-4 py-2.5 font-mono text-muted-foreground">{s.rut}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{s.phone || '—'}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{s.email || '—'}</td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex gap-1">
+                <tr key={s.id} className="hover:bg-secondary/40 transition-colors">
+                  <td className="px-5 py-3.5 font-semibold text-foreground">{s.name}</td>
+                  <td className="px-4 py-3.5 font-mono text-muted-foreground text-xs">{s.rut || '—'}</td>
+                  <td className="px-4 py-3.5 font-mono text-muted-foreground text-xs">{s.phone || '—'}</td>
+                  <td className="px-4 py-3.5 text-muted-foreground text-xs">{s.email || '—'}</td>
+                  <td className="px-4 py-3.5 text-right">
+                    <div className="flex items-center justify-end gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="size-8"
                         onClick={() => {
                           setEditing(s);
                           setFormOpen(true);
                         }}
+                        title="Editar proveedor"
                       >
-                        <Pencil className="size-4" />
+                        <Pencil className="size-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeactivate(s)}>
-                        <Ban className="size-4" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                        onClick={() => handleDeactivate(s)}
+                        title="Desactivar proveedor"
+                      >
+                        <Ban className="size-3.5" />
                       </Button>
                     </div>
                   </td>

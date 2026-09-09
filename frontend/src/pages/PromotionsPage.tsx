@@ -49,59 +49,72 @@ export function PromotionsPage() {
 
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold">Promociones</h1>
-          <p className="text-sm text-muted-foreground">2x1, 3x2 y packs a precio fijo.</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Promociones & Ofertas</h1>
+          <p className="text-sm text-muted-foreground font-medium">Configura reglas automáticas 2x1, 3x2 y packs a precio especial</p>
         </div>
         <Button
           onClick={() => {
             setEditing(null);
             setFormOpen(true);
           }}
+          className="shadow-sm shadow-emerald-500/20"
         >
-          <Plus className="size-4" />
-          Nueva promoción
+          <Plus className="size-4 mr-1" />
+          Nueva Promoción
         </Button>
       </div>
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && <p className="text-sm text-muted-foreground">Cargando…</p>}
+      {error && <p className="mb-4 text-sm font-medium text-destructive">{error}</p>}
+      {loading && <p className="text-sm font-medium text-muted-foreground">Cargando promociones…</p>}
 
       {!loading && promotions.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-          Sin promociones activas todavía.
+        <div className="rounded-2xl border border-dashed border-border/80 py-14 text-center text-sm text-muted-foreground bg-card">
+          No hay promociones activas en este momento. Crea una para incentivar las ventas en el POS.
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {promotions.map((p) => (
-          <div key={p.id} className="rounded-lg border border-border bg-card p-4">
+          <div key={p.id} className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs transition-all hover:shadow-md">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-1.5 font-display font-bold">
-                <Tag className="size-4 text-accent" />
-                {p.name}
+              <div className="flex items-center gap-2">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+                  <Tag className="size-4" />
+                </div>
+                <div className="font-display font-bold text-foreground text-base">{p.name}</div>
               </div>
               <div className="flex gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="size-8"
                   onClick={() => {
                     setEditing(p);
                     setFormOpen(true);
                   }}
+                  title="Editar promoción"
                 >
-                  <Pencil className="size-4" />
+                  <Pencil className="size-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => handleDeactivate(p)}>
-                  <Ban className="size-4" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                  onClick={() => handleDeactivate(p)}
+                  title="Desactivar promoción"
+                >
+                  <Ban className="size-3.5" />
                 </Button>
               </div>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">{describePromotion(p)}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-1">
-              <Badge variant="neutral">{p.product_ids.length} producto(s)</Badge>
-              {p.ends_at && <Badge variant="warning">hasta {p.ends_at}</Badge>}
+            <p className="mt-3 text-sm font-semibold text-emerald-700 dark:text-emerald-300 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 px-3 py-2">
+              {describePromotion(p)}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <Badge variant="neutral">{p.product_ids.length} producto(s) en oferta</Badge>
+              {p.ends_at && <Badge variant="warning">Vence: {p.ends_at}</Badge>}
             </div>
           </div>
         ))}

@@ -56,66 +56,81 @@ export function UsersPage() {
 
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold">Usuarios</h1>
-          <p className="text-sm text-muted-foreground">Cajeros, bodega y administradores.</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Usuarios & Turnos</h1>
+          <p className="text-sm text-muted-foreground font-medium">Gestión de cajeros, bodegueros y accesos de administración</p>
         </div>
         <Button
           onClick={() => {
             setEditing(null);
             setFormOpen(true);
           }}
+          className="shadow-sm shadow-emerald-500/20"
         >
-          <Plus className="size-4" />
-          Nuevo usuario
+          <Plus className="size-4 mr-1" />
+          Nuevo Usuario
         </Button>
       </div>
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {error && <p className="mb-4 text-sm font-medium text-destructive">{error}</p>}
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-card">
+      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-4 py-2.5 font-medium">Usuario</th>
-              <th className="px-4 py-2.5 font-medium">Rol</th>
-              <th className="px-4 py-2.5 font-medium">Días trabajados</th>
-              <th className="px-4 py-2.5 font-medium">Estado</th>
-              <th className="px-4 py-2.5 font-medium">Acciones</th>
+            <tr className="border-b border-border/60 text-left text-xs uppercase tracking-wider text-muted-foreground bg-secondary/40 font-semibold">
+              <th className="px-5 py-3.5">Colaborador</th>
+              <th className="px-4 py-3.5">Rol de Sistema</th>
+              <th className="px-4 py-3.5">Jornadas / Turnos</th>
+              <th className="px-4 py-3.5">Estado</th>
+              <th className="px-4 py-3.5 text-right">Acciones</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border/60">
             {loading && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                  Cargando…
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                  Cargando equipo…
                 </td>
               </tr>
             )}
             {!loading &&
               users.map((u) => (
-                <tr key={u.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-2.5">
-                    <div className="font-medium">{u.full_name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {u.username} · {u.email}
+                <tr key={u.id} className="hover:bg-secondary/40 transition-colors">
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 font-bold text-xs">
+                        {u.full_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-foreground">{u.full_name}</div>
+                        <div className="text-xs text-muted-foreground font-mono">
+                          @{u.username} {u.email ? `· ${u.email}` : ''}
+                        </div>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-4 py-2.5">{ROLE_LABELS[u.role]}</td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3.5">
+                    <span className="rounded-lg bg-secondary px-2 py-1 text-xs font-semibold text-foreground">
+                      {ROLE_LABELS[u.role]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5">
                     <button
                       onClick={() => setWorkdaysUser(u)}
-                      className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-background px-2.5 py-1 text-xs font-mono font-medium text-foreground hover:bg-secondary transition-colors"
+                      title="Ver historial de turnos"
                     >
-                      <CalendarDays className="size-3.5" />
-                      {u.days_worked} {u.last_worked_on ? `· última: ${u.last_worked_on}` : ''}
+                      <CalendarDays className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                      {u.days_worked} días {u.last_worked_on ? `(último: ${u.last_worked_on})` : ''}
                     </button>
                   </td>
-                  <td className="px-4 py-2.5">
-                    <Badge variant={u.is_active ? 'ok' : 'neutral'}>{u.is_active ? 'Activo' : 'Inactivo'}</Badge>
+                  <td className="px-4 py-3.5">
+                    <Badge variant={u.is_active ? 'ok' : 'neutral'}>
+                      {u.is_active ? 'Activo' : 'Inactivo'}
+                    </Badge>
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3.5 text-right">
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
