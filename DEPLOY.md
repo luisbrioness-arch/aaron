@@ -12,11 +12,8 @@ otros dos proyectos. **No va a haber Node.js corriendo en el servidor** —
 el frontend se compila antes y se sube el resultado estático; `api/` es
 PHP que corre nativo.
 
-- **Producción:** TBD — probablemente un subdominio bajo el mismo hosting
-  que FERRIMIX/Parque San Pedro (`hogartv.cl`), a confirmar con Luis.
-  Placeholder usado en los workflows: `aaronprovisiones.hogartv.cl`.
-- **Base de datos:** TBD (mismo patrón que los otros: `hogartvc_aaron` o
-  similar, MariaDB vía DirectAdmin → MySQL Management).
+- **Producción:** Confirmado: `aaron.hogartv.cl` (subdominio bajo `hogartv.cl`).
+- **Base de datos:** MariaDB vía DirectAdmin → MySQL Management.
 - **Staging:** no existe, igual que en los otros dos proyectos.
 
 ---

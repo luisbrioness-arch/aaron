@@ -1,20 +1,19 @@
 name: Sync debug-mode reports
 
-# ⚠️ TODAVÍA NO FUNCIONAL — depende de los mismos secrets FTP que
-# deploy.yml y de un hosting/dominio real confirmado (ver D-02/D-04). Baja
-# los .md que deja el modo debug del sitio (ver upgrade/fixes/README.md)
-# desde el servidor hacia upgrade/fixes/ en el repo. Reusa los mismos
-# secretos FTP del despliegue — no agrega ningún permiso nuevo al servidor.
+# ✅ Listo para activar — dominio confirmado: aaron.hogartv.cl
+# Depende de los mismos secrets FTP que deploy.yml. Baja los .md que deja
+# el modo debug del sitio (ver upgrade/fixes/README.md) desde el servidor
+# hacia upgrade/fixes/ en el repo. Reusa los mismos secretos FTP del
+# despliegue — no agrega ningún permiso nuevo al servidor.
 #
 # También borra del servidor los reportes que un humano ya resolvió y
 # eliminó de upgrade/fixes/ en el repo (ver "Cerrar un reporte" en
 # upgrade/fixes/README.md) — así un reporte ya arreglado no vuelve a
 # aparecer en cada sync.
 #
-# Copiado literal de FERRIMIX (D-31 en DECISIONS.md) — antes de activarlo,
-# reemplazar "aaronprovisiones.hogartv.cl" por el dominio real y verificar
-# si la cuenta FTP de este hosting queda chroot-eada igual que la de
-# FERRIMIX (un nivel arriba de public_html/) o distinto — no asumir sin
+# Copiado literal de FERRIMIX (D-31 en DECISIONS.md). Antes de activarlo,
+# verificar si la cuenta FTP de este hosting queda chroot-eada igual que la
+# de FERRIMIX (un nivel arriba de public_html/) o distinto — no asumir sin
 # comprobar, ver la advertencia de D-04.
 
 on:
@@ -64,7 +63,7 @@ jobs:
               echo "set ftp:ssl-force true"
               echo "set ssl:verify-certificate no"
               for f in "${to_delete[@]}"; do
-                printf 'rm "aaronprovisiones.hogartv.cl/public_html/upgrade/fixes/%s"\n' "$f"
+                printf 'rm "aaron.hogartv.cl/public_html/upgrade/fixes/%s"\n' "$f"
               done
               echo "bye"
             } | lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" "${{ secrets.FTP_SERVER }}" >> upgrade/fixes/.prune-log.txt 2>&1
@@ -79,7 +78,7 @@ jobs:
           lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" "${{ secrets.FTP_SERVER }}" <<'EOF'
           set ftp:ssl-force true
           set ssl:verify-certificate no
-          mirror --verbose --only-newer aaronprovisiones.hogartv.cl/public_html/upgrade/fixes ./upgrade/fixes
+          mirror --verbose --only-newer aaron.hogartv.cl/public_html/upgrade/fixes ./upgrade/fixes
           bye
           EOF
 

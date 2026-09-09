@@ -1,20 +1,13 @@
 name: Deploy to hosting
 
-# ⚠️ TODAVÍA NO FUNCIONAL — no hay dominio/hosting confirmado (D-02/D-04
-# en DECISIONS.md) ni secrets FTP configurados en este repositorio. Este
-# workflow queda listo con la misma estructura que FERRIMIX/Parque San
-# Pedro; antes de que corra de verdad hay que:
-#   1. Reemplazar el dominio placeholder "aaronprovisiones.hogartv.cl" en
-#      cada "server-dir" de abajo por el subdominio real confirmado.
-#   2. Configurar los secrets FTP_SERVER / FTP_USERNAME / FTP_PASSWORD en
-#      Settings → Secrets and variables → Actions de este repo.
-#   3. Confirmar la ruta real del chroot FTP con un workflow_dispatch de
-#      prueba antes de asumir que un run en verde realmente desplegó algo
-#      (ver D-04: FERRIMIX perdió una hora dando por buena la ruta de otro
-#      proyecto del mismo hosting sin verificarla).
-#   4. Actualizar "base" en frontend/vite.config.ts y "RewriteBase" en
-#      frontend/public/.htaccess si el dominio real termina en subcarpeta
-#      en vez de subdominio propio (ver D-02).
+# ✅ Dominio confirmado: aaron.hogartv.cl
+# Este workflow desplegará automáticamente al hacer push a main.
+# Antes de que corra con éxito hay que:
+#   1. Configurar los secrets FTP_SERVER / FTP_USERNAME / FTP_PASSWORD en
+#      Settings → Secrets and variables → Actions de este repo en GitHub.
+#   2. Confirmar la ruta real del chroot FTP con un workflow_dispatch de
+#      prueba (Run workflow) antes de asumir que un run en verde realmente
+#      desplegó algo (ver D-04).
 
 on:
   push:
@@ -55,7 +48,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           local-dir: ./frontend/dist/
-          server-dir: ./aaronprovisiones.hogartv.cl/public_html/
+          server-dir: ./aaron.hogartv.cl/public_html/
           state-name: .ftp-deploy-sync-state-frontend.json
 
       # config.php nunca está en este repo (gitignored) — este paso jamás
@@ -68,7 +61,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           local-dir: ./api/
-          server-dir: ./aaronprovisiones.hogartv.cl/public_html/api/
+          server-dir: ./aaron.hogartv.cl/public_html/api/
           state-name: .ftp-deploy-sync-state-api.json
           exclude: |
             **/*.example.php
@@ -87,7 +80,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           local-dir: ./upgrade/
-          server-dir: ./aaronprovisiones.hogartv.cl/public_html/upgrade/
+          server-dir: ./aaron.hogartv.cl/public_html/upgrade/
           state-name: .ftp-deploy-sync-state-upgrade.json
           exclude: |
             fixes/**

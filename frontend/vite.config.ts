@@ -4,9 +4,10 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  // TBD: aún no hay dominio/hosting confirmado (ver DECISIONS.md D-04).
-  // Si se despliega en subcarpeta en vez de subdominio, cambiar esto junto
-  // con RewriteBase en public/.htaccess — mismo patrón que FERRIMIX/CRM.
+  // Dominio confirmado: aaron.hogartv.cl (subdominio propio, no subcarpeta).
+  // base:'/' es correcto — no hay que cambiarlo.
+  // Si algún día el sitio se mueve a subcarpeta, cambiar base Y RewriteBase
+  // en frontend/public/.htaccess juntos (ver DECISIONS.md D-02).
   base: '/',
   plugins: [react(), tailwindcss()],
   resolve: {
