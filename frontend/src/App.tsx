@@ -14,6 +14,7 @@ import {
   SuppliersPage,
   UsersPage,
   CustomersPage,
+  DailySalesPage,
 } from '@/pages';
 
 function HomeRedirect() {
@@ -36,6 +37,14 @@ export default function App() {
           element={
             <RequireRole allowed={['cashier', 'admin']}>
               <POSPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/ventas-hoy"
+          element={
+            <RequireRole allowed={['cashier', 'admin']}>
+              <DailySalesPage />
             </RequireRole>
           }
         />

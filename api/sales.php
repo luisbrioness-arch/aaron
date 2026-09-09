@@ -383,7 +383,9 @@ function handleCreate($pdo, $auth) {
 
 function saleSummarySql() {
     return 'SELECT s.id, s.invoice_number, s.invoice_type, s.total_amount, s.discount_amount,
-                    s.payment_method, s.status, s.created_at, u.full_name AS cashier_name
+                    s.payment_method, s.status, s.created_at, s.customer_name, s.customer_rut,
+                    s.customer_id,
+                    u.full_name AS cashier_name
              FROM sales s JOIN users u ON u.id = s.user_id';
 }
 
@@ -406,9 +408,35 @@ function handleList($pdo) {
     }
 
     if (isset($_GET['date'])) {
-        $stmt = $pdo->prepare(saleSummarySql() . ' WHERE s.invoice_date = :date ORDER BY s.created_at DESC LIMIT 100');
+        $stmt = $pdo->prepare(saleSummarySql() . ' WHERE s.invoice_date = :date ORDER BY s.created_at DESC');
         $stmt->execute([':date' => $_GET['date']]);
-        jsonResponse(true, $stmt->fetchAll(), 'Ventas del día');
+        $sales = $stmt->fetchAll();
+
+        $totalRevenue = 0.0;
+        $byMethod = [
+            'cash' => 0.0,
+            'card' => 0.0,
+            'transfer' => 0.0,
+            'credit' => 0.0,
+            'mixed' => 0.0,
+        ];
+        foreach ($sales as $s) {
+            $amt = (float) $s['total_amount'];
+            $totalRevenue += $amt;
+            $m = $s['payment_method'] ?? 'cash';
+            if (!isset($byMethod[$m])) $byMethod[$m] = 0.0;
+            $byMethod[$m] += $amt;
+        }
+
+        jsonResponse(true, [
+            'sales' => $sales,
+            'summary' => [
+                'total_revenue' => $totalRevenue,
+                'count' => count($sales),
+                'by_method' => $byMethod,
+                'average_ticket' => count($sales) > 0 ? round($totalRevenue / count($sales)) : 0,
+            ],
+        ], 'Ventas del día');
     }
 
     $stmt = $pdo->query(saleSummarySql() . ' ORDER BY s.created_at DESC LIMIT 20');
@@ -422,7 +450,11 @@ function handleGet($pdo) {
     }
 
     $stmt = $pdo->prepare(
-        'SELECT s.*, u.full_name AS cashier_name FROM sales s JOIN users u ON u.id = s.user_id WHERE s.id = :id'
+        'SELECT s.*, u.full_name AS cashier_name, c.phone AS customer_phone
+         FROM sales s
+         JOIN users u ON u.id = s.user_id
+         LEFT JOIN customers c ON c.id = s.customer_id
+         WHERE s.id = :id'
     );
     $stmt->execute([':id' => $id]);
     $sale = $stmt->fetch();
@@ -451,13 +483,18 @@ function handleGet($pdo) {
 
     jsonResponse(true, [
         'sale' => [
+            'id' => $sale['id'],
             'invoice_number' => $sale['invoice_number'],
             'invoice_type' => $sale['invoice_type'],
             'total_amount' => (float) $sale['total_amount'],
             'discount_amount' => (float) $sale['discount_amount'],
             'payment_method' => $sale['payment_method'],
+            'amount_received' => isset($sale['amount_received']) ? (float) $sale['amount_received'] : null,
+            'change_amount' => isset($sale['change_amount']) ? (float) $sale['change_amount'] : null,
             'customer_name' => $sale['customer_name'],
             'customer_rut' => $sale['customer_rut'],
+            'customer_phone' => $sale['customer_phone'] ?? null,
+            'customer_id' => $sale['customer_id'] ?? null,
             'invoice_date' => $sale['invoice_date'],
             'created_at' => $sale['created_at'],
             'cashier_name' => $sale['cashier_name'],

@@ -53,12 +53,15 @@ export function DashboardPage() {
               iconBg="bg-emerald-50 dark:bg-emerald-950/50"
               label="Ventas de Hoy"
               value={money(daily?.today_sales ?? 0)}
+              href="/ventas-hoy"
+              badge="Ver detalle del día →"
             />
             <StatTile
               icon={<Receipt className="size-5 text-sky-600 dark:text-sky-400" />}
               iconBg="bg-sky-50 dark:bg-sky-950/50"
               label="Ticket Promedio"
               value={money(daily?.average_ticket ?? 0)}
+              href="/ventas-hoy"
             />
             <StatTile
               icon={<AlertTriangle className="size-5 text-amber-600 dark:text-amber-400" />}

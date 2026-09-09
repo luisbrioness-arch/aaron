@@ -9,4 +9,4 @@ export { PromotionsPage } from './PromotionsPage';
 export { SuppliersPage } from './SuppliersPage';
 export { UsersPage } from './UsersPage';
 export { CustomersPage } from './CustomersPage';
-
+export { DailySalesPage } from './DailySalesPage';
