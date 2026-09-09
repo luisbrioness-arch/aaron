@@ -1,4 +1,4 @@
-=== Prune run: 2026-09-09T10:34:50Z ===
+=== Prune run: 2026-09-09T15:44:53Z ===
 Candidatos a borrar: 0
   - 
 
