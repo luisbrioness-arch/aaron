@@ -401,3 +401,44 @@ barras simple (ventas de los últimos 30 días) — se implementó como un
 dependencia nueva. Es suficiente para esta escala; si más adelante se
 necesitan gráficos más ricos (tooltips, zoom, múltiples series), vale la
 pena evaluar una librería recién en ese momento, no antes.
+
+## D-31 · Modo debug y deploy automático: copiados literales de FERRIMIX, deploy sin activar
+**2026-08-28** · Vigente
+
+A pedido explícito ("hagamos el procesamiento tal cual FERRIMIX"), se
+portaron dos mecanismos de FERRIMIX que Aaron todavía no tenía:
+
+**Modo debug (`?Debug=1`)** — copiado literal de FERRIMIX (su D-15, que a
+su vez lo copió de Parque San Pedro): `api/debug_report.php` (público,
+sin JWT, con honeypot + `DEBUG_REPORT_KEY` opcional vía `hash_equals`),
+`frontend/src/lib/debug-mode.ts` + `submit-debug-report.ts` (FAB "Reportar
+problema", selección de elemento, diálogo de descripción), y
+`upgrade/fixes/` como destino de los reportes (`.md`, sin base de datos,
+protegido por `.htaccess`). Único cambio real frente al original: la
+paleta de colores del widget usa los tokens de Aaron (`#b87a22` dorado en
+vez del azul `#0052CC` de FERRIMIX, `#a23b2e` rojo teja en vez de su
+rojo de error) — mismo principio ya aplicado en el resto del proyecto, no
+reusar los colores de FERRIMIX. **Esta parte SÍ funciona ya en local**
+(`npm run dev` + `?Debug=1`), no depende de hosting.
+
+**Deploy automático (GitHub Actions → DirectAdmin por FTPS)** —
+`.github/workflows/deploy.yml` y `sync-debug-reports.yml`, mismo
+patrón/estructura que FERRIMIX (build → FTPS en pasos separados para
+frontend/API/`upgrade/`, exclusión de `config.php`/`schema.sql`/
+`*.example.php`/`fixes/**`). **Esta parte NO puede activarse todavía**:
+Aaron no tiene dominio/hosting confirmado (D-02/D-04 siguen abiertas) ni
+secrets FTP configurados en GitHub. Los workflows quedan con un dominio
+placeholder (`aaronprovisiones.hogartv.cl`) marcado explícitamente como
+TBD en comentarios — al confirmar el hosting real hay que reemplazarlo en
+los dos `.yml`, en `vite.config.ts` y en `frontend/public/.htaccess`
+juntos (ver D-02), configurar los 3 secrets, y **verificar la ruta real
+del chroot FTP con un `workflow_dispatch` de prueba antes de confiar en
+un run en verde** — FERRIMIX perdió una hora completa por saltarse ese
+paso (su propia D-04). Se agregó `DEPLOY.md` documentando todo esto,
+adaptado de `DEPLOY.md` de FERRIMIX pero dejando explícito en cada
+sección qué sigue pendiente en vez de describir un sistema ya activo.
+
+**Diferencia deliberada frente al original:** el `exclude` de
+`deploy.yml` para `api/` acá también excluye `seed*.sql` (FERRIMIX solo
+excluye `schema.sql`) — Aaron tiene `seed_admin.sql` con un hash de
+contraseña real que no tiene sentido subir al servidor de producción.

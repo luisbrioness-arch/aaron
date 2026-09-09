@@ -5,7 +5,9 @@
 Ninguna bloquea seguir construyendo, pero conviene cerrarlas pronto (ver el
 documento de arquitectura, sección "Supuestos abiertos"):
 
-- **Dominio y hosting** — todavía no confirmado (ver D-02/D-04 en `DECISIONS.md`).
+- **Dominio y hosting** — todavía no confirmado (ver D-02/D-04 en
+  `DECISIONS.md` y `DEPLOY.md`). El workflow de deploy y los 3 secrets FTP
+  que necesita quedan listos pero inactivos hasta que esto se resuelva.
 - **Acceso Composer/SSH del hosting** — decide si T-01 usa TCPDF/mPDF real
   o el respaldo HTML + `window.print()` (ver D-06).
 - **Umbral de días para "por vencer"** — 7 días por defecto
@@ -252,3 +254,28 @@ completo de qué se verificó y qué no en cada tarea.
   consulta SQL, ver D-27).
 - **U-09:** Boleta en PDF real o al menos HTML + `window.print()` — sigue
   bloqueada por D-06 (confirmar acceso Composer/SSH del hosting real).
+
+---
+
+## ✅ Completado (parcial) — Modo debug y deploy automático, tal cual FERRIMIX
+
+- **Descripción:** se portaron dos mecanismos de FERRIMIX que no
+  formaban parte del backlog original T-01/T-09: el modo debug
+  (`api/debug_report.php`, `frontend/src/lib/debug-mode.ts`, FAB
+  "Reportar problema", reportes `.md` en `upgrade/fixes/`) y el scaffold
+  de deploy automático (`.github/workflows/deploy.yml` y
+  `sync-debug-reports.yml`, más `DEPLOY.md` nuevo). Detalle completo en
+  D-31 de `DECISIONS.md`.
+- **Status:** ✅ El modo debug funciona ya en local (`npm run dev` +
+  `?Debug=1`) — no depende de hosting. ⚠️ El deploy automático **no está
+  activo**: sigue bloqueado por los mismos pendientes de siempre (dominio/
+  hosting sin confirmar — D-02/D-04, cero secrets FTP configurados en
+  GitHub). Los workflows quedan listos con un dominio placeholder
+  (`aaronprovisiones.hogartv.cl`) marcado como TBD.
+- **Qué falta para activar el deploy:** confirmar dominio real con Luis,
+  reemplazar el placeholder en los 4 lugares que tienen que cambiar juntos
+  (los dos `.yml`, `vite.config.ts`, `public/.htaccess` — ver D-02),
+  configurar `FTP_SERVER`/`FTP_USERNAME`/`FTP_PASSWORD` como secrets del
+  repo, y verificar la ruta real del chroot FTP con un
+  `workflow_dispatch` de prueba antes de confiar en un run verde.
+- Pedido directo en el chat ("hagamos el procesamiento tal cual FERRIMIX").

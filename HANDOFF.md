@@ -13,6 +13,66 @@ las anteriores):
 
 ---
 
+## Sesión 7 — 2026-08-28
+
+Luis pidió "hagamos el procesamiento tal cual FERRIMIX". Aclaré primero
+qué significaba exactamente (di una descripción equivocada de
+`debug_report.php` en la primera pregunta — lo corregí en el chat antes
+de tocar código) y confirmó dos cosas concretas: modo debug (`?Debug=1`)
+y deploy automático vía GitHub Actions. Detalle completo en D-31 de
+`DECISIONS.md`.
+
+### Qué se hizo
+- **Modo debug:** `api/debug_report.php` (público, sin JWT, honeypot +
+  `DEBUG_REPORT_KEY` opcional) copiado literal de FERRIMIX.
+  `frontend/src/lib/debug-mode.ts` + `submit-debug-report.ts` (FAB
+  "Reportar problema", selección de elemento con highlight, diálogo de
+  descripción) — mismo mecanismo, con la paleta de colores cambiada a los
+  tokens de Aaron (dorado/rojo teja en vez del azul/rojo de FERRIMIX).
+  `initDebugMode()` llamado a nivel de módulo en `main.tsx`. Nuevo
+  `upgrade/fixes/README.md` + `upgrade/.htaccess`.
+- **Deploy automático (scaffold, sin activar):**
+  `.github/workflows/deploy.yml` y `sync-debug-reports.yml`, mismo patrón
+  FTPS por pasos que FERRIMIX, con un dominio placeholder
+  (`aaronprovisiones.hogartv.cl`) marcado como TBD en comentarios.
+  `DEPLOY.md` nuevo, documentando todo el proceso pendiente en vez de un
+  sistema activo (a diferencia del de FERRIMIX, que sí está en
+  producción).
+- Documentación: `CLAUDE.md` (mapa de documentos, estructura de carpetas,
+  nueva sección "Modo debug"), `API.md` (nueva sección
+  `debug_report.php`), `NEXT_STEPS.md`, `CHANGELOG.md`.
+
+### Cómo se verificó
+Esta vez **sí se pudo probar de punta a punta en local** (no depende de
+PHP/MariaDB): `npm run dev` + `?Debug=1` en el navegador. Confirmé que el
+FAB aparece, que el modo "seleccionar elemento" intercepta el click real
+(probé clickeando el botón "Ingresar" del login — el formulario NO se
+envió, se abrió el diálogo de reporte con el selector/texto del elemento
+correctos), que un fallo real de red (no hay backend PHP corriendo) se
+maneja con gracia ("No se pudo enviar el reporte", sin perder el diálogo
+ni el texto tipeado), y que con `window.fetch` mockeado el flujo completo
+funciona: el payload que se manda coincide exactamente con lo que espera
+`debug_report.php`, y el toast de éxito muestra el nombre de archivo
+devuelto. `npm run build:frontend` compila limpio.
+
+### Qué falló o quedó a medias
+- El deploy automático **no se pudo probar de ninguna forma** — no hay
+  hosting real, no hay secrets FTP, y aunque los hubiera no hay forma de
+  correr GitHub Actions desde este entorno. Queda solo revisado a mano
+  contra el `.yml` de FERRIMIX que sí funciona en producción.
+- `api/debug_report.php` tampoco se probó contra un servidor PHP real —
+  mismo límite de siempre (sin PHP local instalable en este entorno).
+- No se agregó ningún hint visible en la UI (tipo el `HelpModal` de
+  FERRIMIX) que le diga a un usuario nuevo que `?Debug=1` existe — Aaron
+  no tiene un componente de ayuda equivalente todavía y agregar uno no se
+  pidió. Documentado solo en `CLAUDE.md`/`DEPLOY.md` para quien administre
+  el sitio.
+
+### Subido directo a main / vía PR
+Pendiente — no se hizo commit todavía en esta sesión.
+
+---
+
 ## Sesión 6 — 2026-08-25
 
 Luis pidió "avanza con todo lo que falte" — se implementó el resto del

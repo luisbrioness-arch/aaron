@@ -1,0 +1,93 @@
+name: Deploy to hosting
+
+# ⚠️ TODAVÍA NO FUNCIONAL — no hay dominio/hosting confirmado (D-02/D-04
+# en DECISIONS.md) ni secrets FTP configurados en este repositorio. Este
+# workflow queda listo con la misma estructura que FERRIMIX/Parque San
+# Pedro; antes de que corra de verdad hay que:
+#   1. Reemplazar el dominio placeholder "aaronprovisiones.hogartv.cl" en
+#      cada "server-dir" de abajo por el subdominio real confirmado.
+#   2. Configurar los secrets FTP_SERVER / FTP_USERNAME / FTP_PASSWORD en
+#      Settings → Secrets and variables → Actions de este repo.
+#   3. Confirmar la ruta real del chroot FTP con un workflow_dispatch de
+#      prueba antes de asumir que un run en verde realmente desplegó algo
+#      (ver D-04: FERRIMIX perdió una hora dando por buena la ruta de otro
+#      proyecto del mismo hosting sin verificarla).
+#   4. Actualizar "base" en frontend/vite.config.ts y "RewriteBase" en
+#      frontend/public/.htaccess si el dominio real termina en subcarpeta
+#      en vez de subdominio propio (ver D-02).
+
+on:
+  push:
+    branches: [main]
+    # Commits solo de docs no necesitan deploy — nada en *.md llega al build.
+    paths-ignore:
+      - '**/*.md'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build:frontend
+
+      - name: Deploy frontend
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./frontend/dist/
+          server-dir: ./aaronprovisiones.hogartv.cl/public_html/
+          state-name: .ftp-deploy-sync-state-frontend.json
+
+      # config.php nunca está en este repo (gitignored) — este paso jamás
+      # puede tocarlo ni borrarlo en el servidor.
+      - name: Deploy API
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./api/
+          server-dir: ./aaronprovisiones.hogartv.cl/public_html/api/
+          state-name: .ftp-deploy-sync-state-api.json
+          exclude: |
+            **/*.example.php
+            **/schema.sql
+            **/seed*.sql
+
+      # Solo sube upgrade/.htaccess — "fixes/**" queda excluido para que
+      # esto nunca toque los reportes de modo debug guardados en vivo en
+      # el servidor (los baja/sincroniza sync-debug-reports.yml, no este
+      # workflow).
+      - name: Deploy upgrade/.htaccess
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./upgrade/
+          server-dir: ./aaronprovisiones.hogartv.cl/public_html/upgrade/
+          state-name: .ftp-deploy-sync-state-upgrade.json
+          exclude: |
+            fixes/**

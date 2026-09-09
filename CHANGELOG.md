@@ -4,6 +4,15 @@ Qué cambió en el producto, en lenguaje de usuario final. Todavía no hay
 una versión utilizable — este archivo empieza a llenarse de verdad desde
 T-01.
 
+## 2026-08-28 — Modo debug y deploy automático (scaffold)
+
+Se agregó la posibilidad de reportar problemas de UI directo desde el
+sitio (`?Debug=1`, botón "Reportar problema" abajo a la derecha) — igual
+que en FERRIMIX. Funciona ya en el entorno local. También se dejó armado
+(pero todavía apagado) el sistema de despliegue automático a un servidor
+real vía GitHub Actions — sigue sin poder activarse porque no hay
+dominio/hosting confirmado. No es algo que el negocio note todavía.
+
 ## 2026-08-25 — Dashboard, Informes, Promociones, Proveedores y Usuarios
 
 Con esto queda construido todo lo que se había planeado para el

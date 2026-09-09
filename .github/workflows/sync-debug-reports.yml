@@ -1,0 +1,108 @@
+name: Sync debug-mode reports
+
+# ⚠️ TODAVÍA NO FUNCIONAL — depende de los mismos secrets FTP que
+# deploy.yml y de un hosting/dominio real confirmado (ver D-02/D-04). Baja
+# los .md que deja el modo debug del sitio (ver upgrade/fixes/README.md)
+# desde el servidor hacia upgrade/fixes/ en el repo. Reusa los mismos
+# secretos FTP del despliegue — no agrega ningún permiso nuevo al servidor.
+#
+# También borra del servidor los reportes que un humano ya resolvió y
+# eliminó de upgrade/fixes/ en el repo (ver "Cerrar un reporte" en
+# upgrade/fixes/README.md) — así un reporte ya arreglado no vuelve a
+# aparecer en cada sync.
+#
+# Copiado literal de FERRIMIX (D-31 en DECISIONS.md) — antes de activarlo,
+# reemplazar "aaronprovisiones.hogartv.cl" por el dominio real y verificar
+# si la cuenta FTP de este hosting queda chroot-eada igual que la de
+# FERRIMIX (un nivel arriba de public_html/) o distinto — no asumir sin
+# comprobar, ver la advertencia de D-04.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # cada 6 horas
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      - name: Borrar del servidor los reportes ya resueltos (vistos antes, ausentes ahora)
+        run: |
+          # `set +e`: este paso es de diagnóstico y no debe frenar el
+          # workflow si `lftp` falla — si no, GitHub Actions (que corre
+          # cada paso con `bash -e`) aborta el script antes de escribir el
+          # log o de que el paso de commit llegue a correr.
+          set +e
+          mkdir -p upgrade/fixes
+          touch upgrade/fixes/.synced-manifest.txt
+
+          to_delete=()
+          while IFS= read -r fname; do
+            [ -z "$fname" ] && continue
+            if [ ! -f "upgrade/fixes/$fname" ]; then
+              to_delete+=("$fname")
+            fi
+          done < upgrade/fixes/.synced-manifest.txt
+
+          {
+            echo "=== Prune run: $(date -u +%FT%TZ) ==="
+            echo "Candidatos a borrar: ${#to_delete[@]}"
+            printf '  - %s\n' "${to_delete[@]}"
+            echo
+          } > upgrade/fixes/.prune-log.txt
+
+          if [ "${#to_delete[@]}" -gt 0 ]; then
+            {
+              echo "set ftp:ssl-force true"
+              echo "set ssl:verify-certificate no"
+              for f in "${to_delete[@]}"; do
+                printf 'rm "aaronprovisiones.hogartv.cl/public_html/upgrade/fixes/%s"\n' "$f"
+              done
+              echo "bye"
+            } | lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" "${{ secrets.FTP_SERVER }}" >> upgrade/fixes/.prune-log.txt 2>&1
+            echo "lftp exit code: $?" >> upgrade/fixes/.prune-log.txt
+          fi
+          cat upgrade/fixes/.prune-log.txt
+          exit 0
+
+      - name: Bajar reportes nuevos desde el servidor (solo lectura, no borra nada remoto)
+        run: |
+          mkdir -p upgrade/fixes
+          lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" "${{ secrets.FTP_SERVER }}" <<'EOF'
+          set ftp:ssl-force true
+          set ssl:verify-certificate no
+          mirror --verbose --only-newer aaronprovisiones.hogartv.cl/public_html/upgrade/fixes ./upgrade/fixes
+          bye
+          EOF
+
+      - name: Actualizar el manifiesto de reportes vistos
+        run: |
+          touch upgrade/fixes/.synced-manifest.txt
+          for f in upgrade/fixes/*.md; do
+            [ -e "$f" ] || continue
+            name="$(basename "$f")"
+            [ "$name" = "README.md" ] && continue
+            grep -qxF "$name" upgrade/fixes/.synced-manifest.txt || echo "$name" >> upgrade/fixes/.synced-manifest.txt
+          done
+          sort -o upgrade/fixes/.synced-manifest.txt upgrade/fixes/.synced-manifest.txt
+
+      - name: Commitear cambios (reportes nuevos y/o manifiesto)
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add upgrade/fixes
+          if git diff --cached --quiet; then
+            echo "Sin cambios que commitear."
+          else
+            git commit -m "Sync: nuevos reportes de modo debug"
+            git push
+          fi

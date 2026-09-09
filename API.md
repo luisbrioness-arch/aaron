@@ -589,6 +589,41 @@ de productos por vencer/vencidos para el Dashboard:
 { "success": true, "data": { "expiring_count": 3, "expired_count": 1 }, "message": "Resumen de vencimientos" }
 ```
 
+## Debug — `debug_report.php` — **implementado** (D-31, copiado de FERRIMIX)
+
+Público, **sin JWT** — recibe reportes de bugs desde el modo debug del
+sitio (`?Debug=1`). No forma parte del negocio (POS/inventario); ver
+`CLAUDE.md` → "Modo debug" y `upgrade/fixes/README.md` para el flujo
+completo.
+
+**POST** `?action=` (sin `action`, es el único comportamiento del archivo)
+```json
+{
+  "description": "El botón no responde en mobile",
+  "page_url": "http://localhost:5173/pos?Debug=1",
+  "page_path": "/pos",
+  "element_tag": "button",
+  "element_text": "Cobrar",
+  "element_selector": "#checkout-btn",
+  "debug_key": "opcional, solo si DEBUG_REPORT_KEY está configurada",
+  "website": ""
+}
+```
+- `description` es obligatorio (máx. 2000 caracteres).
+- `website` es un honeypot — si viene con contenido, se rechaza como spam.
+- Si `DEBUG_REPORT_KEY` está configurada en `config.php` del servidor,
+  `debug_key` debe coincidir (`hash_equals`, timing-safe) o responde 403.
+  Si no está configurada, el endpoint queda abierto — a propósito, ver
+  D-31.
+
+Respuesta:
+```json
+{ "success": true, "data": { "file": "2026-08-28_1530-checkout-btn.md" }, "message": "Reporte guardado" }
+```
+
+Escribe un `.md` en `upgrade/fixes/` (sibling de `api/`, fuera del build
+del frontend). No toca base de datos.
+
 ## Códigos de error
 
 | Código | Significado |
