@@ -87,7 +87,7 @@ export function Layout() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <LiveClock variant="compact" />
+          <LiveClock variant="topbar" />
           <button
             onClick={toggleTheme}
             className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
@@ -148,11 +148,6 @@ export function Layout() {
             </div>
             <p className="text-xs text-muted-foreground font-medium">Provisiones & Abarrotes</p>
           </div>
-        </div>
-
-        {/* Reloj y Fecha en Vivo del Sistema */}
-        <div className="px-3 pt-3">
-          <LiveClock variant="sidebar" />
         </div>
 
         {/* Lista de Navegación */}
@@ -226,10 +221,26 @@ export function Layout() {
         </div>
       </aside>
 
-      {/* Contenido Principal */}
-      <main className="min-w-0 flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
-        <Outlet />
-      </main>
+      {/* Área Principal con Topbar Superior */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Topbar superior para Escritorio */}
+        <header className="hidden md:flex h-14 shrink-0 items-center justify-between border-b border-border/70 bg-card/60 backdrop-blur-md px-8 sticky top-0 z-20">
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <span className="font-semibold text-foreground">Aaron Provisiones</span>
+            <span className="text-border">/</span>
+            <span>Sistema de Ventas & Caja</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <LiveClock variant="topbar" />
+          </div>
+        </header>
+
+        {/* Contenido Principal */}
+        <main className="min-w-0 flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

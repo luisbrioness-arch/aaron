@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Calendar, Clock } from 'lucide-react';
 
 interface LiveClockProps {
-  variant?: 'sidebar' | 'compact' | 'header';
+  variant?: 'sidebar' | 'compact' | 'header' | 'topbar';
   className?: string;
 }
 
@@ -44,6 +44,26 @@ export function LiveClock({ variant = 'sidebar', className = '' }: LiveClockProp
         <span className="flex size-1.5 rounded-full bg-emerald-500 animate-pulse" />
         <Clock className="size-3 text-emerald-600 dark:text-emerald-400" />
         <span>{timeString}</span>
+      </div>
+    );
+  }
+
+  if (variant === 'topbar') {
+    return (
+      <div
+        className={`inline-flex items-center gap-2 sm:gap-2.5 rounded-full border border-border/80 bg-secondary/50 px-3 py-1.5 text-xs font-medium text-foreground shadow-2xs backdrop-blur-xs ${className}`}
+        title={`Sistema sincronizado: ${capitalizedDay}, ${dateString}`}
+      >
+        <div className="hidden sm:flex items-center gap-1.5 text-muted-foreground">
+          <Calendar className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="capitalize">{capitalizedDay}</span>, <span>{dateString}</span>
+        </div>
+        <span className="hidden sm:inline-block text-border">•</span>
+        <div className="flex items-center gap-1.5 font-mono font-semibold">
+          <Clock className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span>{timeString}</span>
+          <span className="flex size-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" title="En línea" />
+        </div>
       </div>
     );
   }

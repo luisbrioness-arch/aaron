@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { DollarSign, Receipt, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
-import { LiveClock } from '@/components/LiveClock';
 import { getDailySales, getExpiringSummary, getTopProducts, getWeeklySales } from '@/lib/reports';
 import type { DailySalesReport, ExpiringSummary, TopProduct, WeeklySalesPoint } from '@/types';
 
@@ -32,12 +31,9 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Panel de Control</h1>
-          <p className="text-sm text-muted-foreground font-medium">Métricas clave, ventas y alertas del negocio en tiempo real.</p>
-        </div>
-        <LiveClock variant="header" className="self-start sm:self-auto" />
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Panel de Control</h1>
+        <p className="text-sm text-muted-foreground font-medium">Métricas clave, ventas y alertas del negocio en tiempo real.</p>
       </div>
 
       {error && <p className="text-sm font-medium text-destructive">{error}</p>}
