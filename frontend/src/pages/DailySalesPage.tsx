@@ -594,7 +594,7 @@ function SaleDetailModal({
                 <span>{money(data.subtotal)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>IVA (19%):</span>
+                <span>IVA (19% incluido):</span>
                 <span>{money(data.iva)}</span>
               </div>
               {data.discount_total > 0 && (
@@ -712,7 +712,7 @@ function SaleDetailModal({
                   <span>{money(data.subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>IVA (19%):</span>
+                  <span>IVA (19% incluido):</span>
                   <span>{money(data.iva)}</span>
                 </div>
                 {data.discount_total > 0 && (

@@ -46,9 +46,13 @@ function computeTotals(cart: CartLine[], saleDiscountInput: number, paymentMetho
   const afterLineDiscounts = grossSubtotal - lineDiscountTotal;
   const saleDiscount = Math.round(Math.max(0, Math.min(saleDiscountInput, afterLineDiscounts)));
   const discountTotal = lineDiscountTotal + saleDiscount;
-  const subtotal = grossSubtotal - discountTotal;
-  const iva = Math.round(subtotal * 0.19);
-  const totalBeforeRounding = subtotal + iva;
+
+  // Los precios de los productos ya incluyen IVA (precio a público).
+  // No se suma IVA al final; el total a pagar es el subtotal bruto menos descuentos.
+  const totalBeforeRounding = Math.max(0, grossSubtotal - discountTotal);
+  const subtotal = Math.round(totalBeforeRounding / 1.19); // Subtotal Neto
+  const iva = totalBeforeRounding - subtotal;              // IVA 19% desglosado
+
   let totalAmount = totalBeforeRounding;
   let roundingAdjustment = 0;
   if (paymentMethod === 'cash') {
@@ -276,7 +280,7 @@ export function POSPage() {
               <span>{money(receipt.subtotal)}</span>
             </div>
             <div className="flex justify-between">
-              <span>IVA (19%):</span>
+              <span>IVA (19% incluido):</span>
               <span>{money(receipt.iva)}</span>
             </div>
             <div className="flex justify-between font-bold text-xs pt-1 border-t border-dotted border-black">
@@ -668,13 +672,13 @@ export function POSPage() {
                 </div>
               )}
 
-              <div className="flex justify-between text-muted-foreground">
-                <span>Neto</span>
+              <div className="flex justify-between text-muted-foreground text-xs">
+                <span>Neto (sin IVA)</span>
                 <span className="font-mono text-foreground">{money(totals.subtotal)}</span>
               </div>
 
-              <div className="flex justify-between text-muted-foreground">
-                <span>IVA (19%)</span>
+              <div className="flex justify-between text-muted-foreground text-xs">
+                <span>IVA 19% (incluido)</span>
                 <span className="font-mono text-foreground">{money(totals.iva)}</span>
               </div>
 

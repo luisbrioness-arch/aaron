@@ -274,9 +274,12 @@ function handleCreate($pdo, $auth) {
         $afterLineDiscounts = $grossSubtotal - $lineDiscountTotal;
         $saleDiscount = round(max(0, min($saleDiscountInput, $afterLineDiscounts)));
         $discountTotal = $lineDiscountTotal + $saleDiscount;
-        $subtotal = $grossSubtotal - $discountTotal;
-        $iva = round($subtotal * IVA_RATE);
-        $totalBeforeRounding = $subtotal + $iva;
+
+        // Los precios de los productos ya incluyen IVA (precio a público).
+        // El total a pagar es el subtotal bruto menos descuentos, NO se suma IVA encima.
+        $totalBeforeRounding = max(0, $grossSubtotal - $discountTotal);
+        $subtotal = round($totalBeforeRounding / (1 + IVA_RATE)); // Subtotal Neto
+        $iva = $totalBeforeRounding - $subtotal;                  // IVA 19% incluido
 
         if ($paymentMethod === 'cash') {
             $totalAmount = round($totalBeforeRounding / 10) * 10;
@@ -477,9 +480,10 @@ function handleGet($pdo) {
         $grossSubtotal += (float) $item['subtotal'];
         $discountTotal += (float) $item['discount_amount'];
     }
-    $subtotal = $grossSubtotal - $discountTotal;
-    $iva = round($subtotal * IVA_RATE);
-    $roundingAdjustment = (float) $sale['total_amount'] - $subtotal - $iva;
+    $totalBeforeRounding = max(0, $grossSubtotal - $discountTotal);
+    $subtotal = round($totalBeforeRounding / (1 + IVA_RATE));
+    $iva = $totalBeforeRounding - $subtotal;
+    $roundingAdjustment = (float) $sale['total_amount'] - $totalBeforeRounding;
 
     jsonResponse(true, [
         'sale' => [
