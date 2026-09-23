@@ -70,8 +70,7 @@ jobs:
 
       # Solo sube upgrade/.htaccess — "fixes/**" queda excluido para que
       # esto nunca toque los reportes de modo debug guardados en vivo en
-      # el servidor (los baja/sincroniza sync-debug-reports.yml, no este
-      # workflow).
+      # el servidor.
       - name: Deploy upgrade/.htaccess
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
